@@ -38,3 +38,17 @@ private:
 	Colour _col_diffuse; 
 	Colour _col_specular; 
 };
+
+// Rendering mode, one bit per mode
+enum mode {
+	SIGNATURE = 0,	// Scene signature
+	NO_SPECULAR = 1,	// Ambient + diffuse lighting using Phong model
+	FULL_PHONG = 1 << 1,			// Ambient + diffuse + specular using Phong Model
+	SPECULAR_ONLY = 1 << 2,
+	AMBIENT_ONLY = 1 << 3,
+	DIFFUSE_ONLY = 1 << 4
+
+};
+	
+// Render mode
+extern mode _render_mode;

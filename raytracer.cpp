@@ -16,6 +16,8 @@
 #include <cmath>
 #include <iostream>
 
+mode _render_mode = SIGNATURE;
+
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 }
@@ -257,7 +259,8 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			Ray3D ray;
 			ray.origin = viewToWorld * origin;
 			ray.dir = viewToWorld * (imagePlane - origin);
-			
+			//ray.dir.normalize();
+
 			Colour col = shadeRay(ray); 
 
 			_rbuffer[i*width+j] = int(col[0]*255);
@@ -277,6 +280,14 @@ int main(int argc, char* argv[])
 	// change this if you're just implementing part one of the 
 	// assignment.  
 	Raytracer raytracer;
+
+	//_render_mode = SIGNATURE;
+	//_render_mode = NO_SPECULAR;
+	_render_mode = SPECULAR_ONLY;
+	//_render_mode = FULL_PHONG;
+	//_render_mode = AMBIENT_ONLY;
+	//_render_mode = DIFFUSE_ONLY;
+
 	int width = 320; 
 	int height = 240; 
 
@@ -330,4 +341,3 @@ int main(int argc, char* argv[])
 	
 	return 0;
 }
-
