@@ -239,7 +239,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 
 	initPixelBuffer();
 	viewToWorld = initInvViewMatrix(eye, view, up);
-
+	
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
 		for (int j = 0; j < _scrWidth; j++) {
@@ -255,7 +255,9 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			// shadeRay(ray) to generate pixel colour. 	
 			
 			Ray3D ray;
-
+			ray.origin = viewToWorld * origin;
+			ray.dir = viewToWorld * (imagePlane - origin);
+			
 			Colour col = shadeRay(ray); 
 
 			_rbuffer[i*width+j] = int(col[0]*255);

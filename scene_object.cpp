@@ -26,7 +26,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// HINT: Remember to first transform the ray into object space  
 	// to simplify the intersection test.
 
-	bool b_isHit = false;
+	bool b_isHit = false; // if ray actually hit this first
 	Vector3D ray_dir = worldToModel * ray.dir;
 	Point3D ray_orig = worldToModel * ray.origin;
 	double t_value;
@@ -45,14 +45,18 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 				0);
 			if (abs(intersection[0]) <= 0.50 && abs(intersection[1]) <= 0.50)
 			{
-				// within +/- 0.5
-				b_isHit = true;
-				ray.intersection.t_value = t_value;
-				ray.intersection.none = false;
-				Vector3D normal = modelToWorld * Vector3D(0.0, 0.0, 1.0);
-				normal.normalize();
-				ray.intersection.normal = normal;
-				ray.intersection.point = modelToWorld * intersection;
+				// within +/- 0.5 is an intersection
+				// Now compare to other intersections, if any
+				if (ray.intersection.none || ray.intersection.t_value > t_value)
+				{
+					b_isHit = true;
+					ray.intersection.none = false;
+					ray.intersection.t_value = t_value;
+					Vector3D normal = modelToWorld * Vector3D(0.0, 0.0, 1.0);
+					normal.normalize();
+					ray.intersection.normal = normal;
+					ray.intersection.point = modelToWorld * intersection;
+				}
 			}
 		}
 	}
@@ -114,12 +118,20 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// Populate ray.intersection 
 	if (b_isHit)
 	{
-		ray.intersection.none = false;
-		ray.intersection.t_value = t_value;
-		ray.intersection.point = modelToWorld * (ray_orig + (t_value * ray_dir));
-		Vector3D normal = modelToWorld * (ray.intersection.point - Point3D(0.0, 0.0, 0.0));
-		normal.normalize();
-		ray.intersection.normal = normal;
+		if (ray.intersection.none || ray.intersection.t_value > t_value)
+		{
+			ray.intersection.none = false;
+			ray.intersection.t_value = t_value;
+			ray.intersection.point = modelToWorld * (ray_orig + (t_value * ray_dir));
+			Vector3D normal = modelToWorld * (ray.intersection.point - Point3D(0.0, 0.0, 0.0));
+			normal.normalize();
+			ray.intersection.normal = normal;
+		}
+		else
+		{
+			// Has intersection but not the first one ray hits
+			b_isHit = false;
+		}
 	}
 
 	return b_isHit;
