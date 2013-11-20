@@ -50,7 +50,7 @@ void PointLight::shade( Ray3D& ray ) {
 		// Add diffuse, mat*light*max(0,factor), factor = normal(dot)light
 		double factor = objNormal.dot( vec_light );
 		factor = factor>0.0? factor: 0.0;
-		newColor = newColor + ( pow(factor, objMat->specular_exp) * (_col_diffuse * objMat->diffuse));
+		newColor = newColor + ( factor * (_col_diffuse * objMat->diffuse));
 	}
 
 	// Specular

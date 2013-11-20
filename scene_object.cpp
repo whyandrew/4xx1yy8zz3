@@ -52,7 +52,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 					b_isHit = true;
 					ray.intersection.none = false;
 					ray.intersection.t_value = t_value;
-					Vector3D normal = modelToWorld * Vector3D(0.0, 0.0, 1.0);
+					Vector3D normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
 					normal.normalize();
 					ray.intersection.normal = normal;
 					ray.intersection.point = modelToWorld * intersection;
@@ -120,10 +120,11 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	{
 		if (ray.intersection.none || ray.intersection.t_value > t_value)
 		{
+			Point3D intersectPt = ray_orig + (t_value * ray_dir);
 			ray.intersection.none = false;
 			ray.intersection.t_value = t_value;
-			ray.intersection.point = modelToWorld * (ray_orig + (t_value * ray_dir));
-			Vector3D normal = modelToWorld * (Point3D(0.0, 0.0, 0.0) - ray.intersection.point);
+			ray.intersection.point = modelToWorld * intersectPt;
+			Vector3D normal = transNorm( worldToModel, (Point3D(0.0, 0.0, 0.0) - intersectPt) );
 			normal.normalize();
 			ray.intersection.normal = normal;
 		}
