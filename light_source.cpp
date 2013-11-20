@@ -35,7 +35,7 @@ void PointLight::shade( Ray3D& ray ) {
 	Point3D objPoint = ray.intersection.point;
 
 	// Ambient
-	if (_render_mode & (AMBIENT_ONLY | FULL_PHONG | NO_SPECULAR))
+	if (_render_mode & MODE_AMBIENT)
 	{
 		// Add ambient, uniform non-directional
 		newColor = newColor + (_col_ambient * objMat->ambient);
@@ -45,7 +45,7 @@ void PointLight::shade( Ray3D& ray ) {
 	vec_light.normalize();
 
 	// Diffuse
-	if (_render_mode & (NO_SPECULAR | FULL_PHONG | DIFFUSE_ONLY))
+	if (_render_mode & MODE_DIFFUSE)
 	{
 		// Add diffuse, mat*light*max(0,factor), factor = normal(dot)light
 		double factor = objNormal.dot( vec_light );
@@ -54,7 +54,7 @@ void PointLight::shade( Ray3D& ray ) {
 	}
 
 	// Specular
-	if (_render_mode & (FULL_PHONG | SPECULAR_ONLY))
+	if (_render_mode & MODE_SPECULAR)
 	{
 		// Add specular, mat*light*max(0,factor), factor = -ray(dot)reflect
 		// reflect = 2(light(dot)normal)*normal - light

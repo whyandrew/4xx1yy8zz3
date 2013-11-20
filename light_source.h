@@ -41,12 +41,11 @@ private:
 
 // Rendering mode, one bit per mode
 enum mode {
-	SIGNATURE = 0,	// Scene signature
-	NO_SPECULAR = 1,	// Ambient + diffuse lighting using Phong model
-	FULL_PHONG = 1 << 1,			// Ambient + diffuse + specular using Phong Model
-	SPECULAR_ONLY = 1 << 2,
-	AMBIENT_ONLY = 1 << 3,
-	DIFFUSE_ONLY = 1 << 4
+	MODE_SIGNATURE = 0,	// Scene signature
+	MODE_SPECULAR = 1 << 2,
+	MODE_AMBIENT= 1 << 3,
+	MODE_DIFFUSE= 1 << 4,
+	MODE_FULL_PHONG = MODE_SPECULAR | MODE_AMBIENT | MODE_DIFFUSE,
 
 };
 	

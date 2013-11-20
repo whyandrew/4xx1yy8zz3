@@ -281,12 +281,8 @@ int main(int argc, char* argv[])
 	// assignment.  
 	Raytracer raytracer;
 
-	//_render_mode = SIGNATURE;
-	//_render_mode = NO_SPECULAR;
-	//_render_mode = SPECULAR_ONLY;
-	_render_mode = FULL_PHONG;
-	//_render_mode = AMBIENT_ONLY;
-	//_render_mode = DIFFUSE_ONLY;
+	//_render_mode = MODE_SIGNATURE;
+	_render_mode = MODE_SPECULAR;
 
 	int width = 320; 
 	int height = 240; 
