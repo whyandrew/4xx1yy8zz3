@@ -21,7 +21,7 @@ void PointLight::shade( Ray3D& ray ) {
 	// before this function.  
 
 	// Scene Signature only
-	if (_render_mode == SIGNATURE)
+	if (_render_mode == MODE_SIGNATURE)
 	{
 		// Just use plain diffuse color, disregard lights
 		ray.col = ray.intersection.mat->diffuse;

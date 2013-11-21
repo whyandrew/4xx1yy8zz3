@@ -16,7 +16,7 @@
 #include <cmath>
 #include <iostream>
 
-mode _render_mode = SIGNATURE;
+mode _render_mode = MODE_SIGNATURE;
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
@@ -282,7 +282,8 @@ int main(int argc, char* argv[])
 	Raytracer raytracer;
 
 	//_render_mode = MODE_SIGNATURE;
-	_render_mode = MODE_SPECULAR;
+	//_render_mode = MODE_SPECULAR;
+	_render_mode = MODE_FULL_PHONG;
 
 	int width = 320; 
 	int height = 240; 
