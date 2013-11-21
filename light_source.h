@@ -16,7 +16,7 @@
 // differently.
 class LightSource {
 public:
-	virtual void shade( Ray3D& ) = 0;
+	virtual void shade( Ray3D&) = 0;
 	virtual Point3D get_position() const = 0; 
 };
 
@@ -46,7 +46,7 @@ enum mode {
 	MODE_AMBIENT= 1 << 3,
 	MODE_DIFFUSE= 1 << 4,
 	MODE_FULL_PHONG = MODE_SPECULAR | MODE_AMBIENT | MODE_DIFFUSE,
-
+	MODE_MULTITHREAD = 1 << 5
 };
 	
 // Render mode

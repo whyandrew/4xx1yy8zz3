@@ -15,6 +15,8 @@
 #include "bmp_io.h"
 #include <cmath>
 #include <iostream>
+#include <thread>
+#include <ctime>
 
 mode _render_mode = MODE_SIGNATURE;
 
@@ -155,33 +157,35 @@ Matrix4x4 Raytracer::initInvViewMatrix( Point3D eye, Vector3D view,
 	return mat; 
 }
 
-void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
+void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray, 
+							  Matrix4x4* modelToWorld, Matrix4x4* worldToModel ) {
 	SceneDagNode *childPtr;
 
 	// Applies transformation of the current node to the global
 	// transformation matrices.
-	_modelToWorld = _modelToWorld*node->trans;
-	_worldToModel = node->invtrans*_worldToModel; 
+	*modelToWorld = *modelToWorld*node->trans;
+	*worldToModel = node->invtrans * *worldToModel; 
 	if (node->obj) {
 		// Perform intersection.
-		if (node->obj->intersect(ray, _worldToModel, _modelToWorld)) {
+		if (node->obj->intersect(ray, *worldToModel, *modelToWorld)) {
 			ray.intersection.mat = node->mat;
 		}
 	}
 	// Traverse the children.
 	childPtr = node->child;
 	while (childPtr != NULL) {
-		traverseScene(childPtr, ray);
+		traverseScene(childPtr, ray, modelToWorld, worldToModel);
 		childPtr = childPtr->next;
 	}
 
 	// Removes transformation of the current node from the global
 	// transformation matrices.
-	_worldToModel = node->trans*_worldToModel;
-	_modelToWorld = _modelToWorld*node->invtrans;
+	*worldToModel = node->trans * *worldToModel;
+	*modelToWorld = *modelToWorld * node->invtrans;
 }
 
-void Raytracer::computeShading( Ray3D& ray ) {
+void Raytracer::computeShading( Ray3D& ray, 
+							   Matrix4x4* modelToWorld, Matrix4x4* worldToModel ) {
 	LightListNode* curLight = _lightSource;
 	for (;;) {
 		if (curLight == NULL) break;
@@ -215,14 +219,16 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 	delete _bbuffer;
 }
 
-Colour Raytracer::shadeRay( Ray3D& ray ) {
+Colour Raytracer::shadeRay( Ray3D& ray, 
+						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel) {
 	Colour col(0.0, 0.0, 0.0); 
-	traverseScene(_root, ray); 
+	SceneDagNode *local_root = _root;
+	traverseScene(local_root, ray, modelToWorld, worldToModel); 
 	
 	// Don't bother shading if the ray didn't hit 
 	// anything.
 	if (!ray.intersection.none) {
-		computeShading(ray); 
+		computeShading(ray, modelToWorld, worldToModel); 
 		col = ray.col;  
 	}
 
@@ -237,14 +243,66 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 	Matrix4x4 viewToWorld;
 	_scrWidth = width;
 	_scrHeight = height;
-	double factor = (double(height)/2)/tan(fov*M_PI/360.0);
+	double factor = (double(height)/2) / tan(fov*M_PI/360.0);
 
 	initPixelBuffer();
 	viewToWorld = initInvViewMatrix(eye, view, up);
 	
+	if (_render_mode & MODE_MULTITHREAD)
+	{
+		// Seting up 8 threads... hardcoding not pretty!
+		int segment = _scrWidth / 8;
+		// Arguments for threads
+		renderArgs args1(0, segment, factor, viewToWorld);
+		renderArgs args2(segment, 2*segment, factor, viewToWorld);
+		renderArgs args3(2*segment, 3*segment, factor, viewToWorld);
+		renderArgs args4(3*segment, 4*segment, factor, viewToWorld);
+		renderArgs args5(4*segment, 5*segment, factor, viewToWorld);
+		renderArgs args6(5*segment, 6*segment, factor, viewToWorld);
+		renderArgs args7(6*segment, 7*segment, factor, viewToWorld);
+		renderArgs args8(7*segment, 8*segment, factor, viewToWorld);
+		// Starts threads
+		std::thread t1 (&Raytracer::render_section, this, &args1);
+		std::thread t2 (&Raytracer::render_section, this, &args2);
+		std::thread t3 (&Raytracer::render_section, this, &args3);
+		std::thread t4 (&Raytracer::render_section, this, &args4);
+		std::thread t5 (&Raytracer::render_section, this, &args5);
+		std::thread t6 (&Raytracer::render_section, this, &args6);
+		std::thread t7 (&Raytracer::render_section, this, &args7);
+		std::thread t8 (&Raytracer::render_section, this, &args8);
+		// Wait on threads
+		t1.join();
+		t2.join();
+		t3.join();
+		t4.join();
+		t5.join();
+		t6.join();
+		t7.join();
+		t8.join();
+	}
+	else
+	{
+		renderArgs args(0, _scrWidth, factor, viewToWorld);
+		render_section(&args);
+	}
+	
+	flushPixelBuffer(fileName);
+}
+
+void Raytracer::render_section(renderArgs* args) 
+{
+	int i_start = args->width_start;
+	int i_end = args->width_end>_scrWidth? _scrWidth: args->width_end;
+	Matrix4x4 viewToWorld = args->viewToWorld;
+	double factor = args->factor;
+	int width = _scrWidth;
+	int height = _scrHeight;
+	Matrix4x4 modelToWorld;
+	Matrix4x4 worldToModel; 
+
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
-		for (int j = 0; j < _scrWidth; j++) {
+		for (int j = i_start; j < i_end; j++) {
 			// Sets up ray origin and direction in view space, 
 			// image plane is at z = -1.
 			Point3D origin(0, 0, 0);
@@ -261,19 +319,23 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			ray.dir = viewToWorld * (imagePlane - origin);
 			//ray.dir.normalize();
 
-			Colour col = shadeRay(ray); 
+			Colour col = shadeRay(ray, &modelToWorld, &worldToModel ); 
 
 			_rbuffer[i*width+j] = int(col[0]*255);
 			_gbuffer[i*width+j] = int(col[1]*255);
 			_bbuffer[i*width+j] = int(col[2]*255);
 		}
 	}
-
-	flushPixelBuffer(fileName);
 }
+
 
 int main(int argc, char* argv[])
 {	
+	// Keep a timer
+	std::clock_t start_time;
+	double duration;
+	start_time = std::clock();
+
 	// Build your scene and setup your camera here, by calling 
 	// functions from Raytracer.  The code here sets up an example
 	// scene and renders it from two different view points, DO NOT
@@ -281,12 +343,12 @@ int main(int argc, char* argv[])
 	// assignment.  
 	Raytracer raytracer;
 
-	//_render_mode = MODE_SIGNATURE;
-	//_render_mode = MODE_SPECULAR;
-	_render_mode = MODE_FULL_PHONG;
+	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);
+	//_render_mode = MODE_FULL_PHONG;
 
-	int width = 320; 
-	int height = 240; 
+	int width = 600; 
+	int height = 400; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -336,5 +398,9 @@ int main(int argc, char* argv[])
 	Vector3D view2(-4, -2, -6);
 	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
 	
+	// Calculate time taken
+	duration = (std::clock() - start_time) / 1000.0;
+	std::cout << "Finished rendering in " << duration << " sec." << '\n' << '\n';
+
 	return 0;
 }

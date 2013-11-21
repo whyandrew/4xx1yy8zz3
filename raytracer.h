@@ -59,6 +59,20 @@ struct SceneDagNode {
 	SceneDagNode* child;
 };
 
+// Struct for passing args into render_section
+struct renderArgs {
+	renderArgs(int width_start, int width_end, double factor, Matrix4x4 viewToWorld):
+		width_start(width_start),
+		width_end(width_end),
+		viewToWorld(viewToWorld),
+		factor(factor) {}
+
+	int width_start;
+	int width_end;
+	double factor;
+	Matrix4x4 viewToWorld;
+};
+
 class Raytracer {
 public:
 	Raytracer();
@@ -69,6 +83,11 @@ public:
 	// field of view fov.
 	void render( int width, int height, Point3D eye, Vector3D view, 
 			Vector3D up, double fov, char* fileName );
+
+	// Chop up the rendering into sections along the width range
+	// Each section render the full height of the image.
+
+	void render_section(renderArgs* args);
 
 	// Add an object into the scene, with material mat.  The function
 	// returns a handle to the object node you just added, use the 
@@ -110,7 +129,7 @@ private:
 
 	// Return the colour of the ray after intersection and shading, call 
 	// this function recursively for reflection and refraction.  
-	Colour shadeRay( Ray3D& ray ); 
+	Colour shadeRay( Ray3D& ray, Matrix4x4* modelToWorld, Matrix4x4* worldToModel ); 
 
 	// Constructs a view to world transformation matrix based on the
 	// camera parameters.
@@ -118,12 +137,12 @@ private:
 
 	// Traversal code for the scene graph, the ray is transformed into 
 	// the object space of each node where intersection is performed.
-	void traverseScene( SceneDagNode* node, Ray3D& ray );
+	void traverseScene( SceneDagNode* node, Ray3D& ray, Matrix4x4* modelToWorld, Matrix4x4* worldToModel );
 
 	// After intersection, calculate the colour of the ray by shading it
 	// with all light sources in the scene.
-	void computeShading( Ray3D& ray );
-	
+	void computeShading( Ray3D& ray, Matrix4x4* modelToWorld, Matrix4x4* worldToModel  );
+
 	// Width and height of the viewport.
 	int _scrWidth;
 	int _scrHeight;
@@ -139,6 +158,6 @@ private:
 
 	// Maintain global transformation matrices similar to OpenGL's matrix
 	// stack.  These are used during scene traversal. 
-	Matrix4x4 _modelToWorld;
-	Matrix4x4 _worldToModel;
+	//Matrix4x4 _modelToWorld;
+	//Matrix4x4 _worldToModel;
 };
