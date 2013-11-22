@@ -38,7 +38,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	{
 		// Find ray intersection point to xy-plane
 		t_value = -ray_orig[2] / ray_dir[2];
-		if (t_value >= 0.0) 
+		if (t_value > 0.0) 
 		{
 			Point3D intersection(t_value * ray_dir[0] + ray_orig[0], 
 				t_value * ray_dir[1] + ray_orig[1],

@@ -191,9 +191,22 @@ void Raytracer::computeShading( Ray3D& ray,
 		if (curLight == NULL) break;
 		// Each lightSource provides its own shading function.
 
-		// Implement shadows here if needed.
-
-		curLight->light->shade(ray);
+		// Implement shadows.
+		// ray should contain information about intersection now
+		
+		// Vector from intersect pt to light source
+		Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
+		// Create a new ray to light source
+		Ray3D ray_toLight(ray.intersection.point, vec_toLight);
+		// Check for any intersection in scene
+		SceneDagNode *local_root = _root;
+		traverseScene(local_root, ray_toLight, modelToWorld, worldToModel);
+		
+		if (!ray_toLight.intersection.none)
+		{
+			// Ray toward light source didn't hit other scene object, no shadow
+			curLight->light->shade(ray);
+		}
 		curLight = curLight->next;
 	}
 }
@@ -303,23 +316,64 @@ void Raytracer::render_section(renderArgs* args)
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
 		for (int j = i_start; j < i_end; j++) {
-			// Sets up ray origin and direction in view space, 
-			// image plane is at z = -1.
+
+			// Super-sample antialias modes
+			int i_ssaa = 1;
+			if (_render_mode & MODE_SSAA4)
+			{
+				i_ssaa = 2;
+			}
+			else if (_render_mode & MODE_SSAA16)
+			{
+				i_ssaa = 4;
+			}
+			else if (_render_mode & MODE_SSAA36)
+			{
+				i_ssaa = 6;
+			}
+			else if (_render_mode & MODE_SSAA64)
+			{
+				i_ssaa = 8;
+			}
+
+			Colour col(0.0, 0.0, 0.0);
+			// Sets up ray origin 
 			Point3D origin(0, 0, 0);
 			Point3D imagePlane;
-			imagePlane[0] = (-double(width)/2 + 0.5 + j)/factor;
-			imagePlane[1] = (-double(height)/2 + 0.5 + i)/factor;
-			imagePlane[2] = -1;
 
-			// TODO: Convert ray to world space and call 
-			// shadeRay(ray) to generate pixel colour. 	
+			// Stratified sampling described in text p311
+			for (int p = 0; p < i_ssaa; p++)
+			{
+				for (int q = 0; q < i_ssaa; q++)
+				{
+					double d_rand;
+					if (i_ssaa == 1)
+					{
+						d_rand = 0.5;
+					}
+					else
+					{
+						d_rand = (double)rand() / RAND_MAX;
+					}
+					
+					// Sets up direction in view space, 
+					// image plane is at z = -1.
+					imagePlane[0] = (-double(width)/2 + (p + d_rand)/i_ssaa + j)/factor;
+					imagePlane[1] = (-double(height)/2 + (q + d_rand)/i_ssaa + i)/factor;
+					imagePlane[2] = -1;
+
+					// Convert ray to world space and call 
+					// shadeRay(ray) to generate pixel colour. 	
 			
-			Ray3D ray;
-			ray.origin = viewToWorld * origin;
-			ray.dir = viewToWorld * (imagePlane - origin);
-			//ray.dir.normalize();
+					Ray3D ray;
+					ray.origin = viewToWorld * origin;
+					ray.dir = viewToWorld * (imagePlane - origin);
 
-			Colour col = shadeRay(ray, &modelToWorld, &worldToModel ); 
+					col = col + shadeRay(ray, &modelToWorld, &worldToModel ); 
+				}
+			}
+			// Take average of all sample rays
+			col = (1.0 / (double)(i_ssaa * i_ssaa)) * col;
 
 			_rbuffer[i*width+j] = int(col[0]*255);
 			_gbuffer[i*width+j] = int(col[1]*255);
@@ -344,7 +398,7 @@ int main(int argc, char* argv[])
 	Raytracer raytracer;
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SSAA16);
 	//_render_mode = MODE_FULL_PHONG;
 
 	int width = 600; 
