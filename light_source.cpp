@@ -11,7 +11,7 @@
 #include <cmath>
 #include "light_source.h"
 
-void PointLight::shade( Ray3D& ray ) {
+void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 	// TODO: implement this function to fill in values for ray.col 
 	// using phong shading.  Make sure your vectors are normalized, and
 	// clamp colour values to 1.0.
@@ -45,7 +45,7 @@ void PointLight::shade( Ray3D& ray ) {
 	vec_light.normalize();
 
 	// Diffuse
-	if (_render_mode & MODE_DIFFUSE)
+	if (_render_mode & MODE_DIFFUSE && !b_inShadow)
 	{
 		// Add diffuse, mat*light*max(0,factor), factor = normal(dot)light
 		double factor = objNormal.dot( vec_light );
@@ -54,7 +54,7 @@ void PointLight::shade( Ray3D& ray ) {
 	}
 
 	// Specular
-	if (_render_mode & MODE_SPECULAR)
+	if (_render_mode & MODE_SPECULAR && !b_inShadow)
 	{
 		// Add specular, mat*light*max(0,factor), factor = -ray(dot)reflect
 		// reflect = 2(light(dot)normal)*normal - light

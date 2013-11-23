@@ -200,24 +200,22 @@ void Raytracer::computeShading( Ray3D& ray,
 			Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
 			vec_toLight.normalize();
 			// Advance the intersection point by a small delta
-			Point3D intersectPlusPt = ray.intersection.point + (0.001 * vec_toLight);
+			Point3D intersectPlusPt = ray.intersection.point + (0.01 * vec_toLight);
 			// Create a new ray to light source
 			Ray3D shadowRay(intersectPlusPt, vec_toLight);
 			// Check for any intersection in scene
 			SceneDagNode *local_root = _root;
 			traverseScene(local_root, shadowRay, modelToWorld, worldToModel, true);
 		
-			if (shadowRay.intersection.none)
-			{
-				// Ray toward light source didn't hit other scene object
-				// So not in shadow, shade the original ray
-				curLight->light->shade(ray);
-			}
+			// Shade original ray, depending if in shadow
+			// If shadowRay hits something, then in shadow.
+			curLight->light->shade(ray, !shadowRay.intersection.none);
+
 		}
 		else
 		{
 			// not in MODE_SHADOW
-			curLight->light->shade(ray);
+			curLight->light->shade(ray, false);
 		}
 
 		curLight = curLight->next;
@@ -412,7 +410,7 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD |  MODE_SHADOW);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_SSAA4);
 
 	int width = 600; 
 	int height = 400; 
@@ -432,13 +430,13 @@ int main(int argc, char* argv[])
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
 			51.2 );
-	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
+	Material jade( Colour(0.2, 0.2, 0.2), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
 			12.8 );
 
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				Colour(0.9, 0.9, 0.9) ) );
+				Colour(0.3, 0.3, 0.3), Colour(0.9, 0.9, 0.9), Colour(0.9, 0.9, 0.9) ) );
 
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
