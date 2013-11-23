@@ -13,7 +13,7 @@
 #include "scene_object.h"
 
 bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-		const Matrix4x4& modelToWorld ) {
+		const Matrix4x4& modelToWorld, bool b_shadowRay ) {
 	// TODO: implement intersection code for UnitSquare, which is
 	// defined on the xy-plane, with vertices (0.5, 0.5, 0), 
 	// (-0.5, 0.5, 0), (-0.5, -0.5, 0), (0.5, -0.5, 0), and normal
@@ -52,10 +52,13 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 					b_isHit = true;
 					ray.intersection.none = false;
 					ray.intersection.t_value = t_value;
-					Vector3D normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
-					normal.normalize();
-					ray.intersection.normal = normal;
-					ray.intersection.point = modelToWorld * intersection;
+					if (!b_shadowRay)
+					{
+						Vector3D normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
+						normal.normalize();
+						ray.intersection.normal = normal;
+						ray.intersection.point = modelToWorld * intersection;
+					}
 				}
 			}
 		}
@@ -65,7 +68,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 }
 
 bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-		const Matrix4x4& modelToWorld ) {
+		const Matrix4x4& modelToWorld, bool b_shadowRay ) {
 	// TODO: implement intersection code for UnitSphere, which is centred 
 	// on the origin.  
 	//
@@ -123,10 +126,13 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			Point3D intersectPt = ray_orig + (t_value * ray_dir);
 			ray.intersection.none = false;
 			ray.intersection.t_value = t_value;
-			ray.intersection.point = modelToWorld * intersectPt;
-			Vector3D normal = transNorm( worldToModel, (intersectPt - Point3D(0.0, 0.0, 0.0)) );
-			normal.normalize();
-			ray.intersection.normal = normal;
+			if (!b_shadowRay)
+			{
+				ray.intersection.point = modelToWorld * intersectPt;
+				Vector3D normal = transNorm( worldToModel, (intersectPt - Point3D(0.0, 0.0, 0.0)) );
+				normal.normalize();
+				ray.intersection.normal = normal;
+			}
 		}
 		else
 		{

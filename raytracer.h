@@ -137,7 +137,10 @@ private:
 
 	// Traversal code for the scene graph, the ray is transformed into 
 	// the object space of each node where intersection is performed.
-	void traverseScene( SceneDagNode* node, Ray3D& ray, Matrix4x4* modelToWorld, Matrix4x4* worldToModel );
+	// b_shadowRay == true if it's a shadow ray; false if viewing ray
+	void traverseScene( SceneDagNode* node, Ray3D& ray, 
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel,
+		bool b_shadowRay);
 
 	// After intersection, calculate the colour of the ray by shading it
 	// with all light sources in the scene.

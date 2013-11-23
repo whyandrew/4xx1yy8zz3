@@ -17,7 +17,9 @@
 class SceneObject {
 public:
 	// Returns true if an intersection occured, false otherwise.
-	virtual bool intersect( Ray3D&, const Matrix4x4&, const Matrix4x4& ) = 0;
+	// b_shadowRay indicates if it's a shadow ray, save unneeded calculations
+	virtual bool intersect( Ray3D&, const Matrix4x4&, 
+		const Matrix4x4&, bool b_shadowRay) = 0;
 };
 
 // Example primitive you can create, this is a unit square on 
@@ -25,12 +27,12 @@ public:
 class UnitSquare : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-			const Matrix4x4& modelToWorld );
+			const Matrix4x4& modelToWorld, bool b_shadowRay );
 };
 
 class UnitSphere : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-			const Matrix4x4& modelToWorld );
+			const Matrix4x4& modelToWorld, bool b_shadowRay );
 };
 

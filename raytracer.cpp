@@ -158,7 +158,8 @@ Matrix4x4 Raytracer::initInvViewMatrix( Point3D eye, Vector3D view,
 }
 
 void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray, 
-							  Matrix4x4* modelToWorld, Matrix4x4* worldToModel ) {
+							  Matrix4x4* modelToWorld, Matrix4x4* worldToModel,
+							  bool b_shadowRay) {
 	SceneDagNode *childPtr;
 
 	// Applies transformation of the current node to the global
@@ -167,14 +168,14 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray,
 	*worldToModel = node->invtrans * *worldToModel; 
 	if (node->obj) {
 		// Perform intersection.
-		if (node->obj->intersect(ray, *worldToModel, *modelToWorld)) {
+		if (node->obj->intersect(ray, *worldToModel, *modelToWorld, b_shadowRay)) {
 			ray.intersection.mat = node->mat;
 		}
 	}
 	// Traverse the children.
 	childPtr = node->child;
 	while (childPtr != NULL) {
-		traverseScene(childPtr, ray, modelToWorld, worldToModel);
+		traverseScene(childPtr, ray, modelToWorld, worldToModel, b_shadowRay);
 		childPtr = childPtr->next;
 	}
 
@@ -193,20 +194,32 @@ void Raytracer::computeShading( Ray3D& ray,
 
 		// Implement shadows.
 		// ray should contain information about intersection now
-		
-		// Vector from intersect pt to light source
-		Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
-		// Create a new ray to light source
-		Ray3D ray_toLight(ray.intersection.point, vec_toLight);
-		// Check for any intersection in scene
-		SceneDagNode *local_root = _root;
-		traverseScene(local_root, ray_toLight, modelToWorld, worldToModel);
-		
-		if (!ray_toLight.intersection.none)
+		if (_render_mode & MODE_SHADOW)
 		{
-			// Ray toward light source didn't hit other scene object, no shadow
+			// Vector from intersect pt to light source
+			Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
+			vec_toLight.normalize();
+			// Advance the intersection point by a small delta
+			Point3D intersectPlusPt = ray.intersection.point + (0.001 * vec_toLight);
+			// Create a new ray to light source
+			Ray3D shadowRay(intersectPlusPt, vec_toLight);
+			// Check for any intersection in scene
+			SceneDagNode *local_root = _root;
+			traverseScene(local_root, shadowRay, modelToWorld, worldToModel, true);
+		
+			if (shadowRay.intersection.none)
+			{
+				// Ray toward light source didn't hit other scene object
+				// So not in shadow, shade the original ray
+				curLight->light->shade(ray);
+			}
+		}
+		else
+		{
+			// not in MODE_SHADOW
 			curLight->light->shade(ray);
 		}
+
 		curLight = curLight->next;
 	}
 }
@@ -236,7 +249,7 @@ Colour Raytracer::shadeRay( Ray3D& ray,
 						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel) {
 	Colour col(0.0, 0.0, 0.0); 
 	SceneDagNode *local_root = _root;
-	traverseScene(local_root, ray, modelToWorld, worldToModel); 
+	traverseScene(local_root, ray, modelToWorld, worldToModel, false); 
 	
 	// Don't bother shading if the ray didn't hit 
 	// anything.
@@ -273,7 +286,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 		renderArgs args5(4*segment, 5*segment, factor, viewToWorld);
 		renderArgs args6(5*segment, 6*segment, factor, viewToWorld);
 		renderArgs args7(6*segment, 7*segment, factor, viewToWorld);
-		renderArgs args8(7*segment, 8*segment, factor, viewToWorld);
+		renderArgs args8(7*segment, _scrWidth, factor, viewToWorld);
 		// Starts threads
 		std::thread t1 (&Raytracer::render_section, this, &args1);
 		std::thread t2 (&Raytracer::render_section, this, &args2);
@@ -398,8 +411,8 @@ int main(int argc, char* argv[])
 	Raytracer raytracer;
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SSAA16);
-	//_render_mode = MODE_FULL_PHONG;
+	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD |  MODE_SHADOW);
 
 	int width = 600; 
 	int height = 400; 
@@ -434,7 +447,7 @@ int main(int argc, char* argv[])
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 2.0, 1.0 };
 	double factor2[3] = { 6.0, 6.0, 6.0 };
-	raytracer.translate(sphere, Vector3D(0, 0, -5));	
+	raytracer.translate(sphere, Vector3D(0, 0, -5));
 	raytracer.rotate(sphere, 'x', -45); 
 	raytracer.rotate(sphere, 'z', 45); 
 	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);

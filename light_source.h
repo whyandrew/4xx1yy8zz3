@@ -51,7 +51,14 @@ enum mode {
 	MODE_SSAA16 = 1 << 7,
 	MODE_SSAA36 = 1 << 8,
 	MODE_SSAA64 = 1 << 9,
+	MODE_REFLECT = 1 << 10,
+	MODE_REFRACT = 1 << 11,
+	MODE_SHADOW = 1 << 12,
+
 };
 	
 // Render mode
 extern mode _render_mode;
+extern int _reflect_rays;
+extern int _reflect_depth;
+extern int _refract_rays;
