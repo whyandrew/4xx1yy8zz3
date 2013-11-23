@@ -162,6 +162,20 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray,
 							  bool b_shadowRay) {
 	SceneDagNode *childPtr;
 
+	if (b_shadowRay)
+	{
+		if (!ray.intersection.none)
+		{	// For shadow rays, can stop once intersection is detected
+			return;
+		}
+		else if (ray.intersection.t_value > 0.99)
+		{
+			// if intersection is beyond light, there is also no shadow
+			// Assume shadowRay dir is NOT normalize, so light is at t=0.99
+			ray.intersection.none = true;
+			return;
+		}
+	}
 	// Applies transformation of the current node to the global
 	// transformation matrices.
 	*modelToWorld = *modelToWorld*node->trans;
@@ -197,8 +211,8 @@ void Raytracer::computeShading( Ray3D& ray,
 		if (_render_mode & MODE_SHADOW)
 		{
 			// Vector from intersect pt to light source
+			// DO NOT normalize this vect, so light pos is at ~ t=0.99
 			Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
-			vec_toLight.normalize();
 			// Advance the intersection point by a small delta
 			Point3D intersectPlusPt = ray.intersection.point + (0.01 * vec_toLight);
 			// Create a new ray to light source
