@@ -9,7 +9,9 @@
 ***********************************************************/
 
 #include <cmath>
+#ifndef _UTIL_
 #include "util.h"
+#endif
 
 Point3D::Point3D() {
 	m_data[0] = 0.0;

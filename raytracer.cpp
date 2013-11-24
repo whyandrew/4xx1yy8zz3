@@ -13,6 +13,7 @@
 
 #include "raytracer.h"
 #include "bmp_io.h"
+#include "material.h"
 #include <cmath>
 #include <iostream>
 #include <thread>
@@ -199,39 +200,31 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray,
 	*modelToWorld = *modelToWorld * node->invtrans;
 }
 
+
 void Raytracer::computeShading( Ray3D& ray, 
 							   Matrix4x4* modelToWorld, Matrix4x4* worldToModel ) {
 	LightListNode* curLight = _lightSource;
 	for (;;) {
 		if (curLight == NULL) break;
 		// Each lightSource provides its own shading function.
-
+		/*
 		// Implement shadows.
 		// ray should contain information about intersection now
 		if (_render_mode & MODE_SHADOW)
 		{
-			// Vector from intersect pt to light source
-			// DO NOT normalize this vect, so light pos is at ~ t=0.99
-			Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
-			// Advance the intersection point by a small delta
-			Point3D intersectPlusPt = ray.intersection.point + (0.01 * vec_toLight);
-			// Create a new ray to light source
-			Ray3D shadowRay(intersectPlusPt, vec_toLight);
-			// Check for any intersection in scene
-			SceneDagNode *local_root = _root;
-			traverseScene(local_root, shadowRay, modelToWorld, worldToModel, true);
-		
+			bool b_inShadow = checkShadow( this, ray, curLight->light->get_position(),
+								modelToWorld, worldToModel);
 			// Shade original ray, depending if in shadow
 			// If shadowRay hits something, then in shadow.
-			curLight->light->shade(ray, !shadowRay.intersection.none);
-
+			curLight->light->shade(ray, b_inShadow);
 		}
 		else
 		{
 			// not in MODE_SHADOW
 			curLight->light->shade(ray, false);
 		}
-
+		*/
+		curLight->light->shade(NULL, NULL, NULL);
 		curLight = curLight->next;
 	}
 }
@@ -440,25 +433,18 @@ int main(int argc, char* argv[])
 	Vector3D up(0, 1, 0);
 	double fov = 60;
 
-	// Defines a material for shading.
-	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
-			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 );
-	Material jade( Colour(0.2, 0.2, 0.2), Colour(0.54, 0.89, 0.63), 
-			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 );
-
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
 				Colour(0.3, 0.3, 0.3), Colour(0.9, 0.9, 0.9), Colour(0.9, 0.9, 0.9) ) );
 
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
-	
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &mat_gold );
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &mat_jade );
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_copper);
+	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_chrome);
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 2.0, 1.0 };
-	double factor2[3] = { 6.0, 6.0, 6.0 };
+	double factor2[3] = { 8.0, 8.0, 8.0 };
 	raytracer.translate(sphere, Vector3D(0, 0, -5));
 	raytracer.rotate(sphere, 'x', -45); 
 	raytracer.rotate(sphere, 'z', 45); 
@@ -468,6 +454,11 @@ int main(int argc, char* argv[])
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 
+	raytracer.translate(sphere2, Vector3D(-3, 0, -3));
+	double factor3[3] = {0.2, 0.12, 0.2};
+	raytracer.scale(sphere3, Point3D(0, 0, 0), factor3);
+	raytracer.translate(sphere3, Vector3D(0.5, 0, -2));
+	raytracer.rotate(sphere3, 'y', 30);
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
