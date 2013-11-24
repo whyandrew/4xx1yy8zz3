@@ -17,6 +17,7 @@
 #include <iostream>
 #include <thread>
 #include <ctime>
+#include "material.h"
 
 mode _render_mode = MODE_SIGNATURE;
 
@@ -234,6 +235,7 @@ void Raytracer::computeShading( Ray3D& ray,
 
 		curLight = curLight->next;
 	}
+	ray.col.clamp();
 }
 
 void Raytracer::initPixelBuffer() {
@@ -424,8 +426,8 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_SSAA4);
-
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW);
+	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	int width = 600; 
 	int height = 400; 
 
@@ -440,34 +442,33 @@ int main(int argc, char* argv[])
 	Vector3D up(0, 1, 0);
 	double fov = 60;
 
-	// Defines a material for shading.
-	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
-			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 );
-	Material jade( Colour(0.2, 0.2, 0.2), Colour(0.54, 0.89, 0.63), 
-			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 );
-
 	// Defines a point light source.
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
-				Colour(0.3, 0.3, 0.3), Colour(0.9, 0.9, 0.9), Colour(0.9, 0.9, 0.9) ) );
 
+	raytracer.addLightSource( new PointLight(Point3D(5, 0, 5), 	Colour(0,0,0), Colour(0.4, 0.4, 0.4), Colour(0.4, 0.4, 0.4)) );
+	raytracer.addLightSource( new PointLight(Point3D(0, 5, 5), Colour(0,0,0), Colour(0.4, 0.4, 0.4), Colour(0.4, 0.4, 0.4) ) );
+	raytracer.addLightSource( new PointLight(Point3D(-5, -5, 5), Colour(0,0,0), Colour(0.4, 0.4, 0.4), Colour(0.4, 0.4, 0.4) ) );
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
-	
-	// Apply some transformations to the unit square.
-	double factor1[3] = { 1.0, 2.0, 1.0 };
-	double factor2[3] = { 6.0, 6.0, 6.0 };
-	raytracer.translate(sphere, Vector3D(0, 0, -5));
-	raytracer.rotate(sphere, 'x', -45); 
-	raytracer.rotate(sphere, 'z', 45); 
-	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+    SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &mat_gold );
+    SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &mat_jade );
+    SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_copper);
+    SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_chrome);
+    // Apply some transformations to the unit square.
+    double factor1[3] = { 1.0, 2.0, 1.0 };
+    double factor2[3] = { 8.0, 8.0, 8.0 };
+    raytracer.translate(sphere, Vector3D(0, 0, -5));
+    raytracer.rotate(sphere, 'x', -45); 
+    raytracer.rotate(sphere, 'z', 45); 
+    raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
 
-	raytracer.translate(plane, Vector3D(0, 0, -7));	
-	raytracer.rotate(plane, 'z', 45); 
-	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+    raytracer.translate(plane, Vector3D(0, 0, -7));        
+    raytracer.rotate(plane, 'z', 45); 
+    raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 
+    raytracer.translate(sphere2, Vector3D(-3, 0, -3));
+    double factor3[3] = {0.2, 0.12, 0.2};
+    raytracer.scale(sphere3, Point3D(0, 0, 0), factor3);
+    raytracer.translate(sphere3, Vector3D(0.5, 0, -2));
+    raytracer.rotate(sphere3, 'y', 30);
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");

@@ -68,9 +68,9 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 		//newColor = newColor + ( factor * _col_specular * objMat->specular);
 	}
 
-	newColor.clamp();
+	//newColor.clamp();
 
 	ray.col = ray.col + newColor;
-
+	//ray.col =  newColor;
 }
 
