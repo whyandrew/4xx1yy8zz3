@@ -34,11 +34,11 @@ Material mat_copper( Colour(0.19125, 0.0735, 0.0225),
 Material mat_chrome( Colour(0.25, 0.25, 0.25), 
 					Colour(0.4,0.4,0.4), 
 					Colour(0.774597,0.774597,0.774597), 
-					128*0.6, 0.7 );
+					128*0.6, 0.3 );
 
-Material mat_glass( Colour(0.1,0.1,0.1), 
-					Colour(0.1,0.1,0.1), 
-					Colour(0.1,0.1,0.1), 
+Material mat_mirror( Colour(0,0,0), 
+					Colour(0,0,0), 
+					Colour(1,1,1), 
 					128, 1);
 
 
@@ -46,19 +46,19 @@ Material mat_glass( Colour(0.1,0.1,0.1),
 Material mat_red( Colour(0.3,0.1,0.1), 
 					Colour(0.4,0.1,0.1), 
 					Colour(0.7,0.2,0.2), 
-					128*0.6, 0.3);
+					128*0.6, 0.1);
 
 Material mat_green( Colour(0.1,0.3,0.1), 
 					Colour(0.1,0.4,0.1), 
 					Colour(0.2,0.7,0.2), 
-					128*0.6, 0.3);
+					128*0.6, 0.1);
 
 Material mat_blue( Colour(0.1,0.1,0.3), 
 					Colour(0.1,0.1,0.4), 
 					Colour(0.2,0.2,0.7), 
-					128*0.6, 0.3);
+					128*0.6, 0.1);
 
 Material mat_yellow( Colour(0.3,0.3,0.1), 
 					Colour(0.6,0.6,0.1), 
 					Colour(0.6,0.6,0.2), 
-					128*0.6, 0.3);
+					128*0.6, 0.1);

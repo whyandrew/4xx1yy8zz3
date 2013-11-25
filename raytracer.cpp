@@ -28,7 +28,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 10;
+		_reflect_depth = 5;
 		_reflect_rays = 1;
 	}
 }
@@ -311,9 +311,12 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 					}
 					else 
 					{
+						// if distance >= 1.0, use inverse
+						// distance < 1.0, use 2-dist, and cap it to max of 4
 						double distance = reflectRay.intersection.t_value;
-						distance = distance < 1? 1: distance;
-						double factor = ray.intersection.mat->reflect_factor / (distance*distance);
+						double factor = distance>=1.0? 1.0/distance: 2.0-distance;
+						
+						factor = ray.intersection.mat->reflect_factor * factor;
 						totalReflectColor = totalReflectColor + (factor * reflectColor);
 					}
 				}
@@ -465,7 +468,6 @@ void Raytracer::render_section(renderArgs* args)
 	}
 }
 
-
 int main(int argc, char* argv[])
 {	
 	// Keep a timer
@@ -475,7 +477,7 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW |MODE_REFLECT);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	
 	// Build your scene and setup your camera here, by calling 
@@ -485,7 +487,7 @@ int main(int argc, char* argv[])
 	// assignment.  
 	Raytracer raytracer;
 
-	int width = 600; 
+	int width = 500; 
 	int height = 400; 
 
 	if (argc == 3) {
@@ -503,36 +505,46 @@ int main(int argc, char* argv[])
 
 	//raytracer.addLightSource( new PointLight(Point3D(4, 0, 5), 	Colour(0,0,0), Colour(0.2, 0.2, 0.2), Colour(0.2, 0.2, 0.2)) );
 	//raytracer.addLightSource( new PointLight(Point3D(0, 4, 5), Colour(0,0,0), Colour(0.2, 0.2, 0.2), Colour(0.2, 0.2, 0.2) ) );
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 0), Colour(1,1,1)));
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 0), Colour(0.5,0.5,0.5)));
+	//raytracer.addLightSource( new PointLight(Point3D(0, 0, 1), Colour(1,1,1)));
+	raytracer.addLightSource( new PointLight(Point3D(0, 3.9, 1), Colour(0.5,0.5,0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 1), Colour(0.5,0.5,0.5)));
+	//raytracer.addLightSource( new PointLight(Point3D(0, 3.9, 1), Colour(0.5,0.5,0.5)));
 
-    SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &mat_glass );
+    SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &mat_mirror );
 	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_copper );
+	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_mirror );
 
     SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_blue );
 	SceneDagNode* plane_bottom = raytracer.addObject( new UnitSquare(), &mat_green);
-	SceneDagNode* plane_left = raytracer.addObject( new UnitSquare(), &mat_glass);
+	SceneDagNode* plane_left = raytracer.addObject( new UnitSquare(), &mat_red);
 	SceneDagNode* plane_top = raytracer.addObject( new UnitSquare(), &mat_yellow);
-	SceneDagNode* plane_right = raytracer.addObject( new UnitSquare(), &mat_glass);
-	SceneDagNode* plane_behind = raytracer.addObject( new UnitSquare(), &mat_jade);
+	SceneDagNode* plane_right = raytracer.addObject( new UnitSquare(), &mat_chrome);
+	//SceneDagNode* plane_behind = raytracer.addObject( new UnitSquare(), &mat_jade);
 
 	double factor1[3] = {0.3, 0.3, 0.3};
-    raytracer.translate(sphere, Vector3D(-2.5, -0.5, -5));
+    raytracer.translate(sphere, Vector3D(-2, -0.5, -5));
 	raytracer.translate(sphere2, Vector3D(2, 0, -4.5));
 	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
+
+	double factor3[3] = {0.5, 0.5, 0.5};
+	raytracer.translate(sphere3, Vector3D(0, -0.5, -5));
+	raytracer.scale(sphere3, Point3D(0,0,0), factor3);
+
 
 	double factor2[3] = { 8.0, 8.0, 8.0 };
     raytracer.translate(plane_back, Vector3D(0, 0, -7));        
     raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
 
-	raytracer.translate(plane_behind, Vector3D(0, 0, 1));        
-    raytracer.scale(plane_behind, Point3D(0, 0, 0), factor2);
+
+
+	//raytracer.translate(plane_behind, Vector3D(0, 0, 1));        
+    //raytracer.scale(plane_behind, Point3D(0, 0, 0), factor2);
 
 	raytracer.translate(plane_bottom, Vector3D(0, -2, -3));        
     raytracer.scale(plane_bottom, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_bottom, 'x', -90);
 
-	raytracer.translate(plane_left, Vector3D(0.5, 0, -3));        
+	raytracer.translate(plane_left, Vector3D(-4, 0, -3));        
     raytracer.scale(plane_left, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_left, 'y', 90);
 
@@ -540,12 +552,12 @@ int main(int argc, char* argv[])
     raytracer.scale(plane_top, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_top, 'x', 90);
 
-	raytracer.translate(plane_right, Vector3D(2.5, 0, -3));        
+	raytracer.translate(plane_right, Vector3D(4, 0, -3));        
     raytracer.scale(plane_right, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_right, 'y', -90);
 
-    //raytracer.translate(sphere2, Vector3D(-3, 0, -3));
-    double factor3[3] = {0.2, 0.12, 0.2};
+    raytracer.translate(sphere2, Vector3D(-3, 0, -3));
+
     //raytracer.scale(sphere3, Point3D(0, 0, 0), factor3);
    // raytracer.translate(sphere3, Vector3D(0.5, 0, -2));
     //raytracer.rotate(sphere3, 'y', 30);
