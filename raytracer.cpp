@@ -20,9 +20,17 @@
 #include "material.h"
 
 mode _render_mode = MODE_SIGNATURE;
+int _reflect_rays;
+int _reflect_depth;
+int _refract_rays;
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
+	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
+	{
+		_reflect_depth = 10;
+		_reflect_rays = 1;
+	}
 }
 
 Raytracer::~Raytracer() {
@@ -259,22 +267,69 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 	delete _bbuffer;
 }
 
-Colour Raytracer::shadeRay( Ray3D& ray, 
+Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel) {
 	Colour col(0.0, 0.0, 0.0); 
 	SceneDagNode *local_root = _root;
+
 	traverseScene(local_root, ray, modelToWorld, worldToModel, false); 
 	
 	// Don't bother shading if the ray didn't hit 
 	// anything.
 	if (!ray.intersection.none) {
 		computeShading(ray, modelToWorld, worldToModel); 
-		col = ray.col;  
-	}
-
+ 
 	// You'll want to call shadeRay recursively (with a different ray, 
 	// of course) here to implement reflection/refraction effects.  
 
+	// Generate secondary ray(s) from ray.intersection.point
+	// either follow normal, or more rays
+	// shaderay(secondary_ray);
+	// add secondary_ray.col to ray.col, with some deminishing factor?? try (1/t-value)
+		Colour totalReflectColor(0.0, 0.0, 0.0);
+		bool b_done = false;
+		if (depth > 0 && !b_done)
+		{
+			depth--;
+			//for (int i = 0; i < _reflect_rays; i++)
+			{
+				Point3D intersectPtDelta = ray.origin + ((ray.intersection.t_value * 0.999) * ray.dir);
+				
+				Vector3D reflectRay_dir = ray.dir - 2 * ray.dir.dot(ray.intersection.normal) * ray.intersection.normal;
+
+				reflectRay_dir.normalize();
+				Ray3D reflectRay = Ray3D(intersectPtDelta, reflectRay_dir);
+				Colour reflectColor = shadeRay(reflectRay, depth, modelToWorld, worldToModel);
+				if (!reflectRay.intersection.none)
+				{
+					//Dampening + reflectivity affects factor
+					
+					if (ray.intersection.mat->reflect_factor >= 1.0)
+					{
+						// Assume reflect_factor of 1 is glass
+						totalReflectColor = totalReflectColor + reflectColor;
+					}
+					else 
+					{
+						double distance = reflectRay.intersection.t_value;
+						distance = distance < 1? 1: distance;
+						double factor = ray.intersection.mat->reflect_factor / (distance*distance);
+						totalReflectColor = totalReflectColor + (factor * reflectColor);
+					}
+				}
+				else
+				{
+					// Stop recursion if reflectway not hitting anything
+					b_done = true;
+				}
+			}
+			totalReflectColor.clamp();
+		}
+
+		ray.col = ray.col + totalReflectColor;
+		ray.col.clamp();
+		col = ray.col;
+	}
 	return col; 
 }	
 
@@ -339,6 +394,7 @@ void Raytracer::render_section(renderArgs* args)
 	int height = _scrHeight;
 	Matrix4x4 modelToWorld;
 	Matrix4x4 worldToModel; 
+	
 
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
@@ -396,7 +452,7 @@ void Raytracer::render_section(renderArgs* args)
 					ray.origin = viewToWorld * origin;
 					ray.dir = viewToWorld * (imagePlane - origin);
 
-					col = col + shadeRay(ray, &modelToWorld, &worldToModel ); 
+					col = col + shadeRay(ray, _reflect_depth, &modelToWorld, &worldToModel ); 
 				}
 			}
 			// Take average of all sample rays
@@ -417,6 +473,11 @@ int main(int argc, char* argv[])
 	double duration;
 	start_time = std::clock();
 
+	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
+	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
+	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
+	
 	// Build your scene and setup your camera here, by calling 
 	// functions from Raytracer.  The code here sets up an example
 	// scene and renders it from two different view points, DO NOT
@@ -424,10 +485,6 @@ int main(int argc, char* argv[])
 	// assignment.  
 	Raytracer raytracer;
 
-	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
-	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW);
-	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	int width = 600; 
 	int height = 400; 
 
@@ -444,38 +501,61 @@ int main(int argc, char* argv[])
 
 	// Defines a point light source.
 
-	raytracer.addLightSource( new PointLight(Point3D(5, 0, 5), 	Colour(0,0,0), Colour(0.4, 0.4, 0.4), Colour(0.4, 0.4, 0.4)) );
-	raytracer.addLightSource( new PointLight(Point3D(0, 5, 5), Colour(0,0,0), Colour(0.4, 0.4, 0.4), Colour(0.4, 0.4, 0.4) ) );
-	raytracer.addLightSource( new PointLight(Point3D(-5, -5, 5), Colour(0,0,0), Colour(0.4, 0.4, 0.4), Colour(0.4, 0.4, 0.4) ) );
-	// Add a unit square into the scene with material mat.
-    SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &mat_gold );
-    SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &mat_jade );
-    SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_copper);
-    SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_chrome);
-    // Apply some transformations to the unit square.
-    double factor1[3] = { 1.0, 2.0, 1.0 };
-    double factor2[3] = { 8.0, 8.0, 8.0 };
-    raytracer.translate(sphere, Vector3D(0, 0, -5));
-    raytracer.rotate(sphere, 'x', -45); 
-    raytracer.rotate(sphere, 'z', 45); 
-    raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+	//raytracer.addLightSource( new PointLight(Point3D(4, 0, 5), 	Colour(0,0,0), Colour(0.2, 0.2, 0.2), Colour(0.2, 0.2, 0.2)) );
+	//raytracer.addLightSource( new PointLight(Point3D(0, 4, 5), Colour(0,0,0), Colour(0.2, 0.2, 0.2), Colour(0.2, 0.2, 0.2) ) );
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 0), Colour(1,1,1)));
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 0), Colour(0.5,0.5,0.5)));
 
-    raytracer.translate(plane, Vector3D(0, 0, -7));        
-    raytracer.rotate(plane, 'z', 45); 
-    raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+    SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &mat_glass );
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_copper );
 
-    raytracer.translate(sphere2, Vector3D(-3, 0, -3));
+    SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_blue );
+	SceneDagNode* plane_bottom = raytracer.addObject( new UnitSquare(), &mat_green);
+	SceneDagNode* plane_left = raytracer.addObject( new UnitSquare(), &mat_glass);
+	SceneDagNode* plane_top = raytracer.addObject( new UnitSquare(), &mat_yellow);
+	SceneDagNode* plane_right = raytracer.addObject( new UnitSquare(), &mat_glass);
+	SceneDagNode* plane_behind = raytracer.addObject( new UnitSquare(), &mat_jade);
+
+	double factor1[3] = {0.3, 0.3, 0.3};
+    raytracer.translate(sphere, Vector3D(-2.5, -0.5, -5));
+	raytracer.translate(sphere2, Vector3D(2, 0, -4.5));
+	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
+
+	double factor2[3] = { 8.0, 8.0, 8.0 };
+    raytracer.translate(plane_back, Vector3D(0, 0, -7));        
+    raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
+
+	raytracer.translate(plane_behind, Vector3D(0, 0, 1));        
+    raytracer.scale(plane_behind, Point3D(0, 0, 0), factor2);
+
+	raytracer.translate(plane_bottom, Vector3D(0, -2, -3));        
+    raytracer.scale(plane_bottom, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_bottom, 'x', -90);
+
+	raytracer.translate(plane_left, Vector3D(0.5, 0, -3));        
+    raytracer.scale(plane_left, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_left, 'y', 90);
+
+	raytracer.translate(plane_top, Vector3D(0, 4, -3));        
+    raytracer.scale(plane_top, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_top, 'x', 90);
+
+	raytracer.translate(plane_right, Vector3D(2.5, 0, -3));        
+    raytracer.scale(plane_right, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_right, 'y', -90);
+
+    //raytracer.translate(sphere2, Vector3D(-3, 0, -3));
     double factor3[3] = {0.2, 0.12, 0.2};
-    raytracer.scale(sphere3, Point3D(0, 0, 0), factor3);
-    raytracer.translate(sphere3, Vector3D(0.5, 0, -2));
-    raytracer.rotate(sphere3, 'y', 30);
+    //raytracer.scale(sphere3, Point3D(0, 0, 0), factor3);
+   // raytracer.translate(sphere3, Vector3D(0.5, 0, -2));
+    //raytracer.rotate(sphere3, 'y', 30);
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
-	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
+	//raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
 	
 	// Render it from a different point of view.
-	Point3D eye2(4, 2, 1);
-	Vector3D view2(-4, -2, -6);
+	Point3D eye2(2, 2, 1);
+	Vector3D view2(-2, -2, -6);
 	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
 	
 	// Calculate time taken

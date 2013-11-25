@@ -129,7 +129,8 @@ private:
 
 	// Return the colour of the ray after intersection and shading, call 
 	// this function recursively for reflection and refraction.  
-	Colour shadeRay( Ray3D& ray, Matrix4x4* modelToWorld, Matrix4x4* worldToModel ); 
+	Colour shadeRay( Ray3D& ray, int depth, 
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel ); 
 
 	// Constructs a view to world transformation matrix based on the
 	// camera parameters.
