@@ -41,7 +41,7 @@ private:
 
 // Rendering mode, one bit per mode
 enum mode {
-	MODE_SIGNATURE = 0,	// Scene signature
+	MODE_SIGNATURE = 1,	// Scene signature
 	MODE_SPECULAR = 1 << 2,
 	MODE_AMBIENT= 1 << 3,
 	MODE_DIFFUSE= 1 << 4,
