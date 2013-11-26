@@ -307,9 +307,10 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 					if (ray.intersection.mat->reflect_factor >= 1.0)
 					{
 						// Assume reflect_factor of >= 1 is glass
-						// Minus the diffuse component of glass,
+						// Minus the diffuse/ambient component of glass,
 						// so image doesn't get brighter than object
-						Colour mirror_image = (reflectColor - ray.intersection.mat->diffuse);
+						Colour mirror_image = ((reflectColor - 
+							ray.intersection.mat->diffuse) - ray.intersection.mat->ambient);
 						mirror_image.clamp();
 						totalReflectColor = totalReflectColor + mirror_image;
 					}
@@ -480,19 +481,14 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT | MODE_SSAA4);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
-	// Build your scene and setup your camera here, by calling 
-	// functions from Raytracer.  The code here sets up an example
-	// scene and renders it from two different view points, DO NOT
-	// change this if you're just implementing part one of the 
-	// assignment.  
 	Raytracer raytracer;
 
 	int width = 800; 
-	int height = 600; 
+	int height = 800; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -505,7 +501,10 @@ int main(int argc, char* argv[])
 	Vector3D up(0, 1, 0);
 	double fov = 60;
 
-	// SCENE 1: "Room" with 2 mirror spheres and 2 solid sphere and 2 lights.
+	/********************************************************************
+		SCENE 1: 
+			"Room" with 2 mirror spheres and 2 solid sphere and 2 lights.
+	*********************************************************************/
 	/*
 	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW |MODE_REFLECT);
 
@@ -560,28 +559,57 @@ int main(int argc, char* argv[])
 	*/
 
 	// SCENE 2:
-
-
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 1), Colour(1,1,1)));
-
-	double factor0[3] = {0.1, 0.1, 0.1};
+	double factor0[3] = {0.05, 0.05, 0.05};
 	double factor1[3] = {0.5, 0.5, 0.5};
-	double factor2[3] = {2, 2, 2};
+	double factor2[3] = { 8.0, 8.0, 8.0 };
+	double factor3[3] = {2, 2, 2};
 
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 1), Colour(0.5,0.5,0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(0, 3.9, 1), Colour(0.5,0.5,0.5)));
+
+	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_blue );
+
+	SceneDagNode* plane_bottom = raytracer.addObject( new UnitSquare(), &mat_green);
+	SceneDagNode* plane_left = raytracer.addObject( new UnitSquare(), &mat_red);
+	SceneDagNode* plane_top = raytracer.addObject( new UnitSquare(), &mat_gold);
+	SceneDagNode* plane_right = raytracer.addObject( new UnitSquare(), &mat_chrome);
 	
-	SceneDagNode* hyper = raytracer.addObject( new _Hyperboloid(2.0), &mat_red);
-	raytracer.translate(hyper, Vector3D(1, 0, -4));
+    raytracer.translate(plane_back, Vector3D(0, 0, -7));        
+    raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
+
+	raytracer.translate(plane_bottom, Vector3D(0, -2, -3));        
+    raytracer.scale(plane_bottom, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_bottom, 'x', -90);
+
+	raytracer.translate(plane_left, Vector3D(-4, 0, -3));        
+    raytracer.scale(plane_left, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_left, 'y', 90);
+
+	raytracer.translate(plane_top, Vector3D(0, 4, -3));        
+    raytracer.scale(plane_top, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_top, 'x', 90);
+
+	raytracer.translate(plane_right, Vector3D(4, 0, -3));        
+    raytracer.scale(plane_right, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_right, 'y', -90);
+
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_yellow );
+	raytracer.translate(sphere2, Vector3D(2, 0, -2.5));
+	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
+		
+	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_jade );
+	raytracer.translate(sphere3, Vector3D(1, 2, -3));
+	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
+
+	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid(2.5), &mat_mirror);
+	raytracer.translate(hyper, Vector3D(-0.5, 0, -4));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
 	raytracer.rotate(hyper, 'x', 70);
 	
-
-	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_yellow);
-	raytracer.translate(sphere1, Vector3D(-2, 0, -4));
+	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_copper);
+	raytracer.translate(sphere1, Vector3D(-2, 1, -2.7));
 	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
 
-	SceneDagNode* circle1 = raytracer.addObject( new _Circle(3.0, -5, false), &mat_mirror);
-	//raytracer.translate(circle1, Vector3D(0, 0, -5));
-	//raytracer.scale(circle1, Point3D(0.0, 0.0, 0.0), factor2);
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	

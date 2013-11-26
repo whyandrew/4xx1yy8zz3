@@ -186,15 +186,15 @@ bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, bool b_shadowRay ) 
 {
 	// "Draw" a hyperboloid (1 surface) with equation x^2 + y^2 - z^2 = 1
-	// Top and bottom are enclosed with circle of x^2 + y^2 = 2 @ z = +/- 1
-	// Object centered at 0,0,0. , height of 2, and outermost diameter of sqrt(2)
+	// Object centered at 0,0,0. , height of z
 
 	bool b_isHit = false;
 	Vector3D D = worldToModel * ray.dir;
 	//D.normalize();
 	Point3D O = worldToModel * ray.origin;
 	double t_value;
-	double zRange = _zRange>0.0? _zRange/2: -(_zRange/2);
+	double zRange = _zRange>0.0? _zRange: -(_zRange);
+	Point3D hitPt;
 
 	// A = D.z*D.z-D.x*D.x-D.y*D.y		O = origin, D = dir
 	// B = 2.0*(O.z*D.z - O.x*D.x - O.y*D.y)
@@ -210,29 +210,36 @@ bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	{
 		if (ray.intersection.none || ray.intersection.t_value > t_value)
 		{
-			Point3D hitPt = O + (t_value * D);
-			// Restrict hyperboloid to z = [+/- zRange]
-			if (hitPt[2] >= -zRange && hitPt[2] <= zRange)
-			{
-				ray.intersection.none = false;
-				ray.intersection.t_value = t_value;
-				if (!b_shadowRay)
-				{
-					ray.intersection.point = modelToWorld * hitPt;
-					// f:  P.x^2 + P.y^2 - P.z^2 -1 = 0
-					// gradient(f) = ( 2P.x, 2P.y, -2Pz)
-					Point3D outPt = Point3D(2 * hitPt[0],
-						2 * hitPt[1], -2 * hitPt[2]);
-					//Vector3D normal = transNorm( worldToModel, ( Point3D(0.0, 0.0, 0.0) - outPt ));
-					Vector3D normal = transNorm( worldToModel, ( outPt - Point3D(0.0, 0.0, 0.0) ));
-					normal.normalize();
-					ray.intersection.normal = normal;
-				}
-			}
+			hitPt = O + (t_value * D);
 		}
 		else
+		{ 
+			b_isHit = false;
+		}
+	}
+	
+	if (b_isHit)
+	{
+		// Restrict hyperboloid to z = [+/- zRange]
+		if (hitPt[2] >= -zRange && hitPt[2] <= zRange)
 		{
-			// Has intersection but not the first one ray hits
+			ray.intersection.none = false;
+			ray.intersection.t_value = t_value;
+			if (!b_shadowRay)
+			{
+				ray.intersection.point = modelToWorld * hitPt;
+				// f:  P.x^2 + P.y^2 - P.z^2 -1 = 0
+				// gradient(f) = ( 2P.x, 2P.y, -2Pz)
+				Point3D outPt = Point3D(2 * hitPt[0],
+					2 * hitPt[1], -2 * hitPt[2]);
+				//Vector3D normal = transNorm( worldToModel, ( Point3D(0.0, 0.0, 0.0) - outPt ));
+				Vector3D normal = transNorm( worldToModel, ( outPt - Point3D(0.0, 0.0, 0.0) ));
+				normal.normalize();
+				ray.intersection.normal = normal;
+			}
+		}
+		else 
+		{
 			b_isHit = false;
 		}
 	}
@@ -243,9 +250,7 @@ bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 bool _Circle::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, bool b_shadowRay ) 
 {
-	// "Draw" a hyperboloid (1 surface) with equation x^2 + y^2 - z^2 = 1
-	// Top and bottom are enclosed with circle of x^2 + y^2 = 2 @ z = +/- 1
-	// Object centered at 0,0,0. , height of 2, and outermost diameter of sqrt(2)
+	// Draw circular plane parellal to xy plane.
 
 	bool b_isHit = false;
 	Vector3D D = worldToModel * ray.dir;
@@ -253,7 +258,7 @@ bool _Circle::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	double t_value;
 	double radius = _radius>0? _radius: -(_radius);
 	Point3D hitPt;
-	float zvalue = _zvalue;
+	double zvalue = _zvalue;
 
 	// Find (x,y) value when ray hits z=zvalue
 	if (D[2] != 0.0)
@@ -296,6 +301,38 @@ bool _Circle::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			// Has intersection but not the first one ray hits
 			b_isHit = false;
 		}
+	}
+
+	return b_isHit;
+}
+
+void Hyperboloid::construct()
+{
+	// Construct a close hyperboloid with 2 circular planes at the ends
+	// Object centered at 0,0,0. , height of 2*zRange
+
+	double radius;
+	double zValue = _zRange>0? _zRange : -(_zRange);
+
+	p_objList[0] = new _Hyperboloid(_zRange*2.0);
+	// radius of circle = max value of x,y = sqrt(1 + z^2)
+	radius = sqrt( 1 + (zValue * zValue) );
+	p_objList[1] = new _Circle(radius, zValue, false);
+	p_objList[2] = new _Circle(radius, -zValue, true);
+}
+
+bool Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+		const Matrix4x4& modelToWorld, bool b_shadowRay ) 
+{
+	// Loop through p_objList to find the closest intersection with ray
+
+	bool b_isHit = false;
+	SceneObject *obj;
+
+	for (int i = 0; i < 3; i++)
+	{
+		obj = p_objList[i];
+		b_isHit |= obj->intersect(ray, worldToModel, modelToWorld, false);
 	}
 
 	return b_isHit;
