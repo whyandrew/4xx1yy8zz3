@@ -579,9 +579,9 @@ int main(int argc, char* argv[])
 	raytracer.translate(sphere1, Vector3D(-2, 0, -4));
 	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
 
-	SceneDagNode* circle1 = raytracer.addObject( new _Circle(), &mat_mirror);
-	raytracer.translate(circle1, Vector3D(0, 0, -5));
-	raytracer.scale(circle1, Point3D(0.0, 0.0, 0.0), factor2);
+	SceneDagNode* circle1 = raytracer.addObject( new _Circle(3.0, -5, false), &mat_mirror);
+	//raytracer.translate(circle1, Vector3D(0, 0, -5));
+	//raytracer.scale(circle1, Point3D(0.0, 0.0, 0.0), factor2);
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	

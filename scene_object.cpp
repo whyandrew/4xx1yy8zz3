@@ -253,15 +253,16 @@ bool _Circle::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	double t_value;
 	double radius = _radius>0? _radius: -(_radius);
 	Point3D hitPt;
+	float zvalue = _zvalue;
 
 	// Find (x,y) value when ray hits z=zvalue
 	if (D[2] != 0.0)
 	{
-		t_value = (-O[2]) / D[2];
+		t_value = (zvalue - O[2]) / D[2];
 		if (t_value > 0.0)
 		{
 			b_isHit = true;
-			hitPt = Point3D( O[0]+(t_value*D[0]), O[1]+(t_value*D[1]), 0);
+			hitPt = O + (t_value * D);
 		}
 	}
 

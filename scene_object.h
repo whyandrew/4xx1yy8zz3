@@ -41,7 +41,7 @@ public:
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 };
 
-// Hyperboloid lays flat along z-axis
+// Hyperboloid (open-ended) lays flat along z-axis
 class _Hyperboloid : public SceneObject {
 public :
 	_Hyperboloid(): _zRange(1.0) {}
@@ -58,15 +58,28 @@ private :
 // Normal is facing to +z by default.
 class _Circle: public SceneObject {
 public :
-	_Circle(): _radius(1.0){}
-	_Circle(float radius): _radius(radius), _flipNormal(false) {}
-	_Circle(float radius, bool flipNormal): 
-		_radius(radius), _flipNormal(flipNormal) {}
+	_Circle(): _radius(1.0), _flipNormal(false), _zvalue(0.0) {}
+	_Circle(float radius): _radius(radius), _zvalue(0.0), _flipNormal(false) {}
+	_Circle(float radius, float zvalue, bool flipNormal): 
+		_radius(radius), _zvalue(zvalue),_flipNormal(flipNormal) {}
 
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 private :
 	float _radius;
-
+	float _zvalue;
 	bool _flipNormal;
+};
+
+// Hyperboloid close-ended with 2 circle planes
+class Hyperboloid : public SceneObject {
+public :
+	Hyperboloid(): _zRange(1.0) {}
+	// zRange determines how long the hyperboloid is, default = 1
+	Hyperboloid(float zRange): _zRange(zRange) {}
+
+	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+			const Matrix4x4& modelToWorld, bool b_shadowRay );
+private :
+	float _zRange;
 };
