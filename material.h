@@ -37,7 +37,7 @@ Material mat_chrome( Colour(0.25, 0.25, 0.25),
 					128*0.6, 0.3 );
 
 Material mat_mirror( Colour(0,0,0), 
-					Colour(0,0,0), 
+					Colour(0.05, 0.05, 0.05), 
 					Colour(1,1,1), 
 					128, 1);
 

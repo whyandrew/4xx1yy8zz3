@@ -20,6 +20,11 @@ public:
 	// b_shadowRay indicates if it's a shadow ray, save unneeded calculations
 	virtual bool intersect( Ray3D&, const Matrix4x4&, 
 		const Matrix4x4&, bool b_shadowRay) = 0;
+
+	// Solve quadratic for t-value, given A,B,C coefficients
+	// Return true if there is a solution
+	// Store the smaller t solution to p_tValue
+	static bool solveT(double A, double B, double C, double* p_tValue);
 };
 
 // Example primitive you can create, this is a unit square on 
@@ -36,8 +41,32 @@ public:
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 };
 
-class hyperboloid : public SceneObject {
+// Hyperboloid lays flat along z-axis
+class _Hyperboloid : public SceneObject {
 public :
+	_Hyperboloid(): _zRange(1.0) {}
+	// zRange determines how long the hyperboloid is, default = 1
+	_Hyperboloid(float zRange): _zRange(zRange) {}
+
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
+private :
+	float _zRange;
+};
+
+// Circle is parellel to xy-plane, cut across z=0
+// Normal is facing to +z by default.
+class _Circle: public SceneObject {
+public :
+	_Circle(): _radius(1.0){}
+	_Circle(float radius): _radius(radius), _flipNormal(false) {}
+	_Circle(float radius, bool flipNormal): 
+		_radius(radius), _flipNormal(flipNormal) {}
+
+	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+			const Matrix4x4& modelToWorld, bool b_shadowRay );
+private :
+	float _radius;
+
+	bool _flipNormal;
 };

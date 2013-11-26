@@ -126,6 +126,7 @@ private:
 
 Colour operator *(double s, const Colour& c); 
 Colour operator +(const Colour& u, const Colour& v); 
+Colour operator -(const Colour& u, const Colour& v);
 std::ostream& operator <<(std::ostream& o, const Colour& c); 
 
 struct Material {

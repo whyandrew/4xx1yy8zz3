@@ -12,6 +12,44 @@
 #include <iostream>
 #include "scene_object.h"
 
+bool SceneObject::solveT(double A, double B, double C, double* p_tValue)
+{
+	// Solve and store correct value of t in quadratic equation
+	bool b_soln = false;
+	double t_value = 0.0, t_value2;
+	double D = (B * B) - (4 * A * C);
+
+	if (D == 0.0 && A != 0.0)
+	{
+		// 1 intersect. 
+		b_soln = true;
+		t_value = - B / (2 * A);
+	}
+	else if (D > 0.0 && A != 0.0)
+	{
+		// 2 intersects, have to pick correct one, t_value > t_value2
+		t_value = - (B / (2*A) ) + (sqrt(D) / (2*A));
+		t_value2 = - (B / (2*A) ) - (sqrt(D) / (2*A));
+		if (t_value > 0.0 && t_value2 < 0.0)
+		{
+			b_soln = true;
+		}
+		else if (t_value2 > 0.0)
+		{
+			t_value = t_value2;
+			b_soln = true;
+		}
+	}
+	else if (A == 0.0)
+	{
+		t_value = -C / B;
+		b_soln = true;
+	}
+
+	*p_tValue = t_value;
+	return b_soln;
+}
+
 bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, bool b_shadowRay ) {
 	// TODO: implement intersection code for UnitSquare, which is
@@ -123,13 +161,13 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	{
 		if (ray.intersection.none || ray.intersection.t_value > t_value)
 		{
-			Point3D intersectPt = ray_orig + (t_value * ray_dir);
+			Point3D hitPt = ray_orig + (t_value * ray_dir);
 			ray.intersection.none = false;
 			ray.intersection.t_value = t_value;
 			if (!b_shadowRay)
 			{
-				ray.intersection.point = modelToWorld * intersectPt;
-				Vector3D normal = transNorm( worldToModel, (intersectPt - Point3D(0.0, 0.0, 0.0)) );
+				ray.intersection.point = modelToWorld * hitPt;
+				Vector3D normal = transNorm( worldToModel, (hitPt - Point3D(0.0, 0.0, 0.0)) );
 				normal.normalize();
 				ray.intersection.normal = normal;
 			}
@@ -144,56 +182,96 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	return b_isHit;
 }
 
-bool hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, bool b_shadowRay ) 
 {
 	// "Draw" a hyperboloid (1 surface) with equation x^2 + y^2 - z^2 = 1
 	// Top and bottom are enclosed with circle of x^2 + y^2 = 2 @ z = +/- 1
-	// Object centered at 0,0,0. , height of 2, and outermost diameter of 2
+	// Object centered at 0,0,0. , height of 2, and outermost diameter of sqrt(2)
 
 	bool b_isHit = false;
 	Vector3D D = worldToModel * ray.dir;
 	//D.normalize();
 	Point3D O = worldToModel * ray.origin;
-	double t_value, t_value2;
+	double t_value;
+	double zRange = _zRange>0.0? _zRange/2: -(_zRange/2);
 
 	// A = D.z*D.z-D.x*D.x-D.y*D.y		O = origin, D = dir
 	// B = 2.0*(O.z*D.z - O.x*D.x - O.y*D.y)
 	// C = O.z*O.z + k - O.x*O.x - O.y*O.y
-	//double d_A = (D[2]*D[2]) - (D[0]*D[0]) - (D[1]*D[1]);
-	double d_A = 2*D[0]*D[2] -(D[0]*D[0]) - 2*D[0]*D[1] ;
-	//double d_B = 2.0 * ((O[2]*D[2]) - (O[0]*D[0]) - (O[1]*D[1]));
-	double d_B = 2.0*(-(O[0]*D[0]) - (O[0]*D[1] + D[0]*O[1]) + (O[0]*D[2] + D[0]*O[2]));
-	//double d_C = (O[2]*O[2]) + 1 - (O[0]*O[0]) - (O[1]*O[1]);
-	double d_C = -(O[0]*O[0]) - 2.0*(O[0]*O[1]) + 2.0*O[0]*O[2] + 1;
-	// Calculate d_D = B^2 - 4AC; 
-	double d_D = (d_B * d_B) - (4 * d_A * d_C);
+	double d_A = (D[0]*D[0]) + (D[1]*D[1]) - (D[2]*D[2]);
+	double d_B = 2.0 * ( (O[0]*D[0]) + (O[1]*D[1]) - (O[2]*D[2]) );
+	double d_C = (O[0]*O[0]) + (O[1]*O[1]) - (O[2]*O[2]) - 1;
 
-	if (d_D == 0.0 && d_A != 0.0)
+	b_isHit = solveT(d_A, d_B, d_C, &t_value);
+	
+	// Populate ray.intersection 
+	if (b_isHit)
 	{
-		// 1 intersect. 
-		b_isHit = true;
-		t_value = - d_B / (2 * d_A);
+		if (ray.intersection.none || ray.intersection.t_value > t_value)
+		{
+			Point3D hitPt = O + (t_value * D);
+			// Restrict hyperboloid to z = [+/- zRange]
+			if (hitPt[2] >= -zRange && hitPt[2] <= zRange)
+			{
+				ray.intersection.none = false;
+				ray.intersection.t_value = t_value;
+				if (!b_shadowRay)
+				{
+					ray.intersection.point = modelToWorld * hitPt;
+					// f:  P.x^2 + P.y^2 - P.z^2 -1 = 0
+					// gradient(f) = ( 2P.x, 2P.y, -2Pz)
+					Point3D outPt = Point3D(2 * hitPt[0],
+						2 * hitPt[1], -2 * hitPt[2]);
+					//Vector3D normal = transNorm( worldToModel, ( Point3D(0.0, 0.0, 0.0) - outPt ));
+					Vector3D normal = transNorm( worldToModel, ( outPt - Point3D(0.0, 0.0, 0.0) ));
+					normal.normalize();
+					ray.intersection.normal = normal;
+				}
+			}
+		}
+		else
+		{
+			// Has intersection but not the first one ray hits
+			b_isHit = false;
+		}
 	}
-	else if (d_D > 0.0 && d_A != 0.0)
+
+	return b_isHit;
+}
+
+bool _Circle::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+		const Matrix4x4& modelToWorld, bool b_shadowRay ) 
+{
+	// "Draw" a hyperboloid (1 surface) with equation x^2 + y^2 - z^2 = 1
+	// Top and bottom are enclosed with circle of x^2 + y^2 = 2 @ z = +/- 1
+	// Object centered at 0,0,0. , height of 2, and outermost diameter of sqrt(2)
+
+	bool b_isHit = false;
+	Vector3D D = worldToModel * ray.dir;
+	Point3D O = worldToModel * ray.origin;
+	double t_value;
+	double radius = _radius>0? _radius: -(_radius);
+	Point3D hitPt;
+
+	// Find (x,y) value when ray hits z=zvalue
+	if (D[2] != 0.0)
 	{
-		// 2 intersects, have to pick correct one, t_value > t_value2
-		t_value = - (d_B / (2*d_A) ) + (sqrt(d_D) / (2*d_A));
-		t_value2 = - (d_B / (2*d_A) ) - (sqrt(d_D) / (2*d_A));
-		if (t_value > 0.0 && t_value2 < 0.0)
+		t_value = (-O[2]) / D[2];
+		if (t_value > 0.0)
 		{
 			b_isHit = true;
-		}
-		else if (t_value2 > 0.0)
-		{
-			t_value = t_value2;
-			b_isHit = true;
+			hitPt = Point3D( O[0]+(t_value*D[0]), O[1]+(t_value*D[1]), 0);
 		}
 	}
-	else if (d_A == 0.0)
+
+	// See if (x,y) is within circle of radius = _radius
+	if (b_isHit)
 	{
-		t_value = -d_C / d_B;
-		b_isHit = true;
+		if ( (hitPt[0]*hitPt[0] + hitPt[1]*hitPt[1]) > radius*radius)
+		{
+			b_isHit = false;
+		}
 	}
 
 	// Populate ray.intersection 
@@ -201,19 +279,15 @@ bool hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	{
 		if (ray.intersection.none || ray.intersection.t_value > t_value)
 		{
-			Point3D intersectPt = O + (t_value * D);
 			ray.intersection.none = false;
 			ray.intersection.t_value = t_value;
 			if (!b_shadowRay)
 			{
-				ray.intersection.point = modelToWorld * intersectPt;
-				// f = P.z^2 + k - P.x^2 - P.y^2 = 0
-				// gradient(f) = ( -2P.x, -2P.y, 1 + 2Pz)
-				Point3D outPt = Point3D(-2 * intersectPt[0],
-					-2 * intersectPt[1], 1 + 2 * intersectPt[2]);
-				Vector3D normal = transNorm( worldToModel, (Point3D(0.0, 0.0, 0.0) - outPt) );
-				normal.normalize();
-				ray.intersection.normal = normal;
+				ray.intersection.point = modelToWorld * hitPt;
+				// Normal is facing +z by default, flip if (_flipNormal)
+				Vector3D normal = _flipNormal? Vector3D(0.0, 0.0, -1.0): Vector3D(0.0, 0.0, 1.0);
+				ray.intersection.normal = transNorm( worldToModel, normal);
+				ray.intersection.normal.normalize();
 			}
 		}
 		else

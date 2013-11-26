@@ -306,8 +306,12 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 					
 					if (ray.intersection.mat->reflect_factor >= 1.0)
 					{
-						// Assume reflect_factor of 1 is glass
-						totalReflectColor = totalReflectColor + reflectColor;
+						// Assume reflect_factor of >= 1 is glass
+						// Minus the diffuse component of glass,
+						// so image doesn't get brighter than object
+						Colour mirror_image = (reflectColor - ray.intersection.mat->diffuse);
+						mirror_image.clamp();
+						totalReflectColor = totalReflectColor + mirror_image;
 					}
 					else 
 					{
@@ -474,10 +478,11 @@ int main(int argc, char* argv[])
 	double duration;
 	start_time = std::clock();
 
-	_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
+	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD );
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
+	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	// Build your scene and setup your camera here, by calling 
 	// functions from Raytracer.  The code here sets up an example
@@ -559,16 +564,24 @@ int main(int argc, char* argv[])
 
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 1), Colour(1,1,1)));
 
-
-	SceneDagNode* hyper = raytracer.addObject( new hyperboloid(), &mat_yellow);
-
 	double factor0[3] = {0.1, 0.1, 0.1};
-	double factor1[3] = {0.3, 0.3, 0.3};
+	double factor1[3] = {0.5, 0.5, 0.5};
+	double factor2[3] = {2, 2, 2};
 
-	raytracer.translate(hyper, Vector3D(100, 0, -200));
-	raytracer.scale(hyper, Point3D(0,0,0), factor0);
+	
+	SceneDagNode* hyper = raytracer.addObject( new _Hyperboloid(2.0), &mat_red);
+	raytracer.translate(hyper, Vector3D(1, 0, -4));
+	raytracer.scale(hyper, Point3D(0,0,0), factor1);
+	raytracer.rotate(hyper, 'x', 70);
+	
 
- 
+	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_yellow);
+	raytracer.translate(sphere1, Vector3D(-2, 0, -4));
+	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
+
+	SceneDagNode* circle1 = raytracer.addObject( new _Circle(), &mat_mirror);
+	raytracer.translate(circle1, Vector3D(0, 0, -5));
+	raytracer.scale(circle1, Point3D(0.0, 0.0, 0.0), factor2);
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
