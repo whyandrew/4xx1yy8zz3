@@ -28,7 +28,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 5;
+		_reflect_depth = 4;
 		_reflect_rays = 1;
 	}
 }
@@ -481,14 +481,14 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT | MODE_SSAA4);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 800; 
-	int height = 800; 
+	int width = 600; 
+	int height = 600; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -499,7 +499,7 @@ int main(int argc, char* argv[])
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
 	Vector3D up(0, 1, 0);
-	double fov = 60;
+	double fov = 40;
 
 	/********************************************************************
 		SCENE 1: 
@@ -564,8 +564,8 @@ int main(int argc, char* argv[])
 	double factor2[3] = { 8.0, 8.0, 8.0 };
 	double factor3[3] = {2, 2, 2};
 
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 1), Colour(0.5,0.5,0.5)));
-	raytracer.addLightSource( new PointLight(Point3D(0, 3.9, 1), Colour(0.5,0.5,0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, 0), Colour(0.5,0.5,0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(0, 3, 1), Colour(0.5,0.5,0.5)));
 
 	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_blue );
 

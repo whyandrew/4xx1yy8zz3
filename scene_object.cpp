@@ -230,12 +230,9 @@ bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 				ray.intersection.point = modelToWorld * hitPt;
 				// f:  P.x^2 + P.y^2 - P.z^2 -1 = 0
 				// gradient(f) = ( 2P.x, 2P.y, -2Pz)
-				Point3D outPt = Point3D(2 * hitPt[0],
-					2 * hitPt[1], -2 * hitPt[2]);
-				//Vector3D normal = transNorm( worldToModel, ( Point3D(0.0, 0.0, 0.0) - outPt ));
-				Vector3D normal = transNorm( worldToModel, ( outPt - Point3D(0.0, 0.0, 0.0) ));
+				Vector3D normal(2 * hitPt[0], 2 * hitPt[1], -2 * hitPt[2]); 
 				normal.normalize();
-				ray.intersection.normal = normal;
+				ray.intersection.normal = transNorm( worldToModel, normal);
 			}
 		}
 		else 
