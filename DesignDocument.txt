@@ -1,0 +1,20 @@
+*** Refraction ***
+
+- Add member to "ray" storing refractive index of medium ray is travelling in
+
+- Add refractive index member to "Material" struct
+
+- When ray intersects, check ray.dir.dot(surfaceNormal)
+	assuming all normals are pointing OUTWARD of surface
+	and all object are closed.
+	- dotProduct == 0, not entering material
+	-	> 0, ray.dir same dir as normal, so ray hits INSIDE of material
+	-   < 0, ray.dir opposite to normal, ray hits OUTSIDE of material
+
+- Calculate refracting angle, and create refractRay if needed
+	- if to implement having adjacent refecting materials
+		need to advance ray pass intersection and check what material is there
+	- Otherwise, just assume each refracting obj is surrounded by air
+
+- ReFLECTing angle may have to be reversed in +/- if ray hits INSIDE of material
+	since normal is pointing outward.

@@ -46,12 +46,12 @@ class _Hyperboloid : public SceneObject {
 public :
 	_Hyperboloid(): _zRange(0.5) {}
 	// zRange determines how long the hyperboloid is, default = 1
-	_Hyperboloid(float height): _zRange(height/2.0) {}
+	_Hyperboloid(double height): _zRange(height/2.0) {}
 
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 private :
-	float _zRange;
+	double _zRange;
 };
 
 // Circle is parellel to xy-plane, cut across z=0
@@ -76,12 +76,12 @@ class Hyperboloid : public SceneObject {
 public :
 	Hyperboloid(): _zRange(0.5) { construct(); }
 	// zRange determines how long the hyperboloid is, default = 1
-	Hyperboloid(float height): _zRange(height/2.0) { construct(); }
+	Hyperboloid(double height): _zRange(height/2.0) { construct(); }
 
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 private :
-	float _zRange;
+	double _zRange;
 	SceneObject *p_objList[3];
 
 	// Setup a open hyperboloid and 2 circle planes

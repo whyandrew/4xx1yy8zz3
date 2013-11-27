@@ -12,9 +12,13 @@
 
 // Define material properties
 // Material mat_name( Color(ambient), Color(diffuse), Color(specular), 
-//					spec_exp, reflectivity);
+//					spec_exp, reflectivity, [refractive index]);
 
 // reflectivity of 1.0 wil be treated as perfectly reflective
+
+// If material is non-opaque, with refractive index > 1, 
+// transparency (factor) of material is taken as (1.0 - (amb+diffuse+spec))
+// e.g. water normally has ~80% transparency
 
 Material mat_gold( Colour(0.24725, 0.1995, 0.0745), 
 				  Colour(0.75164, 0.60648, 0.22648), 
@@ -46,19 +50,19 @@ Material mat_mirror( Colour(0,0,0),
 Material mat_red( Colour(0.3,0.1,0.1), 
 					Colour(0.4,0.1,0.1), 
 					Colour(0.7,0.2,0.2), 
-					128*0.6, 0.1);
+					128*0.6, 0.5);
 
 Material mat_green( Colour(0.1,0.3,0.1), 
 					Colour(0.1,0.4,0.1), 
 					Colour(0.2,0.7,0.2), 
-					128*0.6, 0.1);
+					128*0.6, 0.5);
 
 Material mat_blue( Colour(0.1,0.1,0.3), 
 					Colour(0.1,0.1,0.4), 
 					Colour(0.2,0.2,0.7), 
-					128*0.6, 0.1);
+					128*0.6, 0.5);
 
 Material mat_yellow( Colour(0.3,0.3,0.1), 
 					Colour(0.6,0.6,0.1), 
 					Colour(0.6,0.6,0.2), 
-					128*0.6, 0.1);
+					128*0.6, 0.5);

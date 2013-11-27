@@ -23,13 +23,15 @@ mode _render_mode = MODE_SIGNATURE;
 int _reflect_rays;
 int _reflect_depth;
 int _refract_rays;
+float _reflect_fudge_factor;
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 4;
+		_reflect_depth = 100;
 		_reflect_rays = 1;
+		_reflect_fudge_factor = 6;
 	}
 }
 
@@ -316,11 +318,11 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 					}
 					else 
 					{
-						// damping factor = 1 / (1 + distance)
-						//double distance = reflectRay.intersection.t_value;
-						//double factor = distance>=1.0? 1.0/distance: 2.0-distance;
-						double factor = 1 / ( 1 + reflectRay.intersection.t_value);
-						factor = ray.intersection.mat->reflect_factor * factor;
+						// Beer's Law: I = Io * e^(-a*x)
+						// a = 1/reflect_factor, x = t_value / _reflect_fudge_factor
+						double factor = exp( 
+							-( (ray.intersection.t_value / _reflect_fudge_factor) 
+							/ ray.intersection.mat->reflect_factor));
 						totalReflectColor = totalReflectColor + (factor * reflectColor);
 					}
 				}
@@ -481,25 +483,19 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT| MODE_SSAA4);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 600; 
-	int height = 600; 
+	int width = 1600; 
+	int height = 1200; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
 		height = atoi(argv[2]);
 	}
-
-	// Camera parameters.
-	Point3D eye(0, 0, 1);
-	Vector3D view(0, 0, -1);
-	Vector3D up(0, 1, 0);
-	double fov = 40;
 
 	/********************************************************************
 		SCENE 1: 
@@ -556,16 +552,36 @@ int main(int argc, char* argv[])
 	raytracer.translate(plane_right, Vector3D(4, 0, -3));        
     raytracer.scale(plane_right, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_right, 'y', -90);
+
+	// Camera parameters.
+	Point3D eye(0, 0, 1);
+	Vector3D view(0, 0, -1);
+	Vector3D up(0, 1, 0);
+	double fov = 40;
+
+	// Render the scene, feel free to make the image smaller for
+	// testing purposes.	
+	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
+	
+	// Render it from a different point of view.
+	Point3D eye2(2, 2, 1);
+	Vector3D view2(-2, -2, -6);
+	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+
 	*/
 
+	/*********************************************************************
 	// SCENE 2:
+			"Room" with mirror hyperboloid
+	***********************************************************************/
+	/*
 	double factor0[3] = {0.05, 0.05, 0.05};
 	double factor1[3] = {0.5, 0.5, 0.5};
 	double factor2[3] = { 8.0, 8.0, 8.0 };
 	double factor3[3] = {2, 2, 2};
 
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, 0), Colour(0.5,0.5,0.5)));
-	raytracer.addLightSource( new PointLight(Point3D(0, 3, 1), Colour(0.5,0.5,0.5)));
+	//raytracer.addLightSource( new PointLight(Point3D(1, 1, 1), Colour(0.5,0.5,0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(-1, 3, 1), Colour(1,1,1)));
 
 	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_blue );
 
@@ -610,6 +626,11 @@ int main(int argc, char* argv[])
 	raytracer.translate(sphere1, Vector3D(-2, 1, -2.7));
 	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
 
+	// Camera parameters.
+	Point3D eye(0, 0, 1);
+	Vector3D view(0, 0, -1);
+	Vector3D up(0, 1, 0);
+	double fov = 40;
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
@@ -619,6 +640,57 @@ int main(int argc, char* argv[])
 	Point3D eye2(2, 2, 1);
 	Vector3D view2(-2, -2, -6);
 	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+
+	*/
+
+	/*********************************************************************
+	// SCENE 3:
+			"Parellelism"
+	***********************************************************************/
+	
+	double factor0[3] = {0.05, 0.05, 0.05};
+	double factor1[3] = {0.5, 0.5, 0.5};
+	double factor2[3] = { 10.0, 8.0, 8.0 };
+	double factor3[3] = {2, 2, 2};
+
+	raytracer.addLightSource( new PointLight(Point3D(1,1,0), Colour(1,1,1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1,1,0), Colour(1,1,1)));
+
+	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_mirror );
+	raytracer.translate(plane_back, Vector3D(0, 0, -1.5));        
+    raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
+
+	SceneDagNode* plane_behind = raytracer.addObject( new UnitSquare(), &mat_mirror );
+	raytracer.translate(plane_behind, Vector3D(0, 0, 1.5));   
+	raytracer.rotate(plane_behind, 'x', 180);
+    raytracer.scale(plane_behind, Point3D(0, 0, 0), factor2);
+
+	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_red);
+	raytracer.translate(sphere1, Vector3D(-2, 1, 0));
+	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
+
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_yellow);
+	raytracer.translate(sphere2, Vector3D(1, 0, 0));
+	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
+
+	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_green);
+	raytracer.translate(sphere3, Vector3D(3.5, 1, 0));
+	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
+
+	// Camera parameters.
+	Point3D eye(1.5, 0, 1);
+	Vector3D view(0, 0, -1);
+	Vector3D up(0, 1, 0);
+	double fov = 40;
+	// Render the scene, feel free to make the image smaller for
+	// testing purposes.	
+	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
+	
+	// Render it from a different point of view.
+	Point3D eye2(2.5, 2, -1);
+	Vector3D view2(-2, -2, -6);
+	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+
 	
 	// Calculate time taken
 	duration = (std::clock() - start_time) / 1000.0;

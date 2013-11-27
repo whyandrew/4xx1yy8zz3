@@ -179,6 +179,11 @@ struct Ray3D {
 	}
 	Ray3D( Point3D p, Vector3D v ) : origin(p), dir(v) {
 		intersection.none = true;
+		refract_index = 1.000277; // default air
+	}
+	Ray3D( Point3D p, Vector3D v, double refractive_index ) :
+		origin(p), dir(v), refract_index(refractive_index) {
+		intersection.none = true;
 	}
 	// Origin and direction of the ray.
 	Point3D origin;
@@ -189,6 +194,8 @@ struct Ray3D {
 	// Current colour of the ray, should be computed by the shading
 	// function.
 	Colour col;
+	// Refractive index of medium the ray is travelling in
+	double refract_index;
 };
 #endif
 
