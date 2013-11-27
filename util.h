@@ -131,10 +131,16 @@ std::ostream& operator <<(std::ostream& o, const Colour& c);
 
 struct Material {
 	Material( Colour ambient, Colour diffuse, Colour specular, 
-		double exp, double ref_factor ) :
+		double exp, double reflective_factor ) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
-		specular_exp(exp), reflect_factor(ref_factor){}
-	
+		specular_exp(exp), reflect_factor(reflective_factor),
+		refract_index(0.0){}
+	Material( Colour ambient, Colour diffuse, Colour specular, 
+		double exp, double reflective_factor, double refractive_index ) :
+		ambient(ambient), diffuse(diffuse), specular(specular), 
+		specular_exp(exp), reflect_factor(reflective_factor),
+		refract_index(refractive_index ){}
+
 	// Ambient components for Phong shading.
 	Colour ambient; 
 	// Diffuse components for Phong shading.
@@ -145,6 +151,9 @@ struct Material {
 	double specular_exp;
 	// Fraction of light being reflected at main reflected angle
 	double reflect_factor;
+	// Refractive index, vacuum=1, air = 1.000277
+	// index of < 1 is assumed to be opaque
+	double refract_index;
 };
 
 struct Intersection {
