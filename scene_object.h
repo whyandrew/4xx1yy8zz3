@@ -27,6 +27,36 @@ public:
 	static bool solveT(double A, double B, double C, double* p_tValue);
 };
 
+// Subclass for object composing of multiple objects
+class CompoundObject : public SceneObject
+{
+public:
+	// All compound object can use the same intersect function
+	// Loop through intersect function of each object in construction
+	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+		const Matrix4x4& modelToWorld, bool b_shadowRay );
+		//virtual void construct();
+protected:
+	CompoundObject(  ): numObj(0) {  };
+	~CompoundObject() 
+	{
+		if (*p_objPList != NULL)
+		{ 
+			for (int i = 0; i < numObj; i++)
+				delete p_objPList[i];
+			delete [] *p_objPList;
+		}
+	}
+	// Function to construct the compound object
+	// Save object points to list
+	//virtual void construct();
+	// Pointer to a list of SceneObject
+	SceneObject **p_objPList;
+	// Total number of object used to construct compound object
+	// Inheriting class must set this number
+	int numObj;
+};
+
 // Example primitive you can create, this is a unit square on 
 // the xy-plane.
 class UnitSquare : public SceneObject {
@@ -84,6 +114,29 @@ private :
 	double _zRange;
 	SceneObject *p_objList[3];
 
+	// Setup a open hyperboloid and 2 circle planes
+	void construct();
+};
+
+// Hyperboloid close-ended with 2 circlar planes
+class Hyperboloid2 : public CompoundObject {
+public :
+	Hyperboloid2(): _zRange(0.5) 
+	{
+		numObj = 3; construct(); 
+	}
+	// zRange determines how long the hyperboloid is, default = 1
+	Hyperboloid2(double height): _zRange(height/2.0)
+	{ 
+		numObj = 3;
+		construct(); 
+	}
+
+	//bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+			//const Matrix4x4& modelToWorld, bool b_shadowRay );
+private :
+	double _zRange;
+public:
 	// Setup a open hyperboloid and 2 circle planes
 	void construct();
 };

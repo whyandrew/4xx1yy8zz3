@@ -50,6 +50,25 @@ bool SceneObject::solveT(double A, double B, double C, double* p_tValue)
 	return b_soln;
 }
 
+bool CompoundObject::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+		const Matrix4x4& modelToWorld, bool b_shadowRay ) 
+{
+	// Loop through p_objList to find the closest intersection with ray
+
+	bool b_isHit = false;
+	SceneObject *p_obj;
+	SceneObject **objPList = p_objPList;
+
+	for (int i = 0; i < numObj; i++)
+	{
+		p_obj = *(objPList + i);
+		b_isHit |= p_obj->intersect(ray, worldToModel, modelToWorld, false);
+
+	}
+
+	return b_isHit;
+}
+
 bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, bool b_shadowRay ) {
 	// TODO: implement intersection code for UnitSquare, which is
@@ -333,4 +352,22 @@ bool Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	}
 
 	return b_isHit;
+}
+
+void Hyperboloid2::construct()
+{
+	// Construct a close hyperboloid with 2 circular planes at the ends
+	// Object centered at 0,0,0. , height of 2*zRange
+
+	double radius;
+	double zValue = _zRange>0? _zRange : -(_zRange);
+	static SceneObject* p_List[3];
+	
+	p_List[0] = new _Hyperboloid(_zRange*2.0);
+	// radius of circle = max value of x,y = sqrt(1 + z^2)
+	radius = sqrt( 1 + (zValue * zValue) );
+	p_List[1] = new _Circle(radius, zValue, false);
+	p_List[2] = new _Circle(radius, -zValue, true);
+
+	p_objPList = p_List;
 }

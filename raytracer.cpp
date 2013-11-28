@@ -483,14 +483,14 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT | MODE_SSAA4);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 1000; 
-	int height = 700; 
+	int width = 300; 
+	int height = 200; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -681,7 +681,7 @@ int main(int argc, char* argv[])
 	raytracer.translate(sphere4, Vector3D(-2, -1, 0));
 	raytracer.scale(sphere4, Point3D(0,0,0), factor1);
 
-	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid(4), &mat_copper);
+	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid2(4), &mat_copper);
 	raytracer.translate(hyper, Vector3D(2.5, -1, 0));
 	raytracer.scale(hyper, Point3D(0,0,0), factor0);
 	raytracer.rotate(hyper, 'z', 90);
