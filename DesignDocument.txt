@@ -1,6 +1,7 @@
 *** Refraction ***
 
 - Add member to "ray" storing refractive index of medium ray is travelling in
+	- rays starting the program set to be in air be default
 
 - Add refractive index member to "Material" struct
 
@@ -18,3 +19,21 @@
 
 - ReFLECTing angle may have to be reversed in +/- if ray hits INSIDE of material
 	since normal is pointing outward.
+
+
+
+
+
+*** Texture Mapping ***
+
+- bmp_io has "read", which initialize and store width, height and pixel buffers.
+
+- map buffers to UnitSquare
+
+- divide by pixel count, so each picture pixel becomes 1/width on the UnitSquare
+	- e.g. let deltaX = (0.5 - x_intersect), 
+	- let each pic pixel represent 1/width = 1/10 on the UnitSquare
+	- loop & countX number of "1/10" deltaX has.... sort of like "deltaX mod (1/10)" 
+	- then map mataerial of intersection as pic pixel (countX, countY)
+
+- Need to add m_bool to scene_object, isTextureMapped

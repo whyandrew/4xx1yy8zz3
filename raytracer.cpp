@@ -29,7 +29,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 100;
+		_reflect_depth = 4;
 		_reflect_rays = 1;
 		_reflect_fudge_factor = 6;
 	}
@@ -483,14 +483,14 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT| MODE_SSAA4);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT | MODE_SSAA4);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 1600; 
-	int height = 1200; 
+	int width = 1000; 
+	int height = 700; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -648,12 +648,12 @@ int main(int argc, char* argv[])
 			"Parellelism"
 	***********************************************************************/
 	
-	double factor0[3] = {0.05, 0.05, 0.05};
+	double factor0[3] = {0.2, 0.2, 0.2};
 	double factor1[3] = {0.5, 0.5, 0.5};
 	double factor2[3] = { 10.0, 8.0, 8.0 };
 	double factor3[3] = {2, 2, 2};
 
-	raytracer.addLightSource( new PointLight(Point3D(1,1,0), Colour(1,1,1)));
+	raytracer.addLightSource( new PointLight(Point3D(1,5,0), Colour(1,1,1)));
 	raytracer.addLightSource( new PointLight(Point3D(-1,1,0), Colour(1,1,1)));
 
 	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_mirror );
@@ -676,6 +676,17 @@ int main(int argc, char* argv[])
 	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_green);
 	raytracer.translate(sphere3, Vector3D(3.5, 1, 0));
 	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
+	
+	SceneDagNode* sphere4 = raytracer.addObject( new UnitSphere(), &mat_blue);
+	raytracer.translate(sphere4, Vector3D(-2, -1, 0));
+	raytracer.scale(sphere4, Point3D(0,0,0), factor1);
+
+	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid(4), &mat_copper);
+	raytracer.translate(hyper, Vector3D(2.5, -1, 0));
+	raytracer.scale(hyper, Point3D(0,0,0), factor0);
+	raytracer.rotate(hyper, 'z', 90);
+	raytracer.rotate(hyper, 'x', 90);
+	
 
 	// Camera parameters.
 	Point3D eye(1.5, 0, 1);
@@ -684,7 +695,7 @@ int main(int argc, char* argv[])
 	double fov = 40;
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
-	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
+	//raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
 	
 	// Render it from a different point of view.
 	Point3D eye2(2.5, 2, -1);
