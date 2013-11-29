@@ -10,6 +10,9 @@
 
 #include "util.h"
 
+// Define refractive index
+#define RI_AIR  1.000277f
+
 // Define material properties
 // Material mat_name( Color(ambient), Color(diffuse), Color(specular), 
 //					spec_exp, reflectivity, [refractive index]);
@@ -53,19 +56,29 @@ Material mat_mirror_regular( Colour(0,0,0),
 Material mat_red( Colour(0.3,0.1,0.1), 
 					Colour(0.4,0.1,0.1), 
 					Colour(0.7,0.2,0.2), 
-					128*0.6, 0.5);
+					128*0.6, 0.4);
 
 Material mat_green( Colour(0.1,0.3,0.1), 
 					Colour(0.1,0.4,0.1), 
 					Colour(0.2,0.7,0.2), 
-					128*0.6, 0.5);
+					128*0.6, 0.4);
 
 Material mat_blue( Colour(0.1,0.1,0.3), 
 					Colour(0.1,0.1,0.4), 
 					Colour(0.2,0.2,0.7), 
-					128*0.6, 0.5);
+					128*0.6, 0.4);
 
 Material mat_yellow( Colour(0.3,0.3,0.1), 
 					Colour(0.6,0.6,0.1), 
 					Colour(0.6,0.6,0.2), 
-					128*0.6, 0.5);
+					128*0.6, 0.4);
+
+Material mat_hotpink( Colour(0.3,0.1,0.2), 
+					Colour(0.6,0.1,0.5), 
+					Colour(0.6,0.2,0.5), 
+					128*0.6, 0.2);
+
+Material mat_purple( Colour(0.25,0.1,0.4), 
+					Colour(0.55,0.1,0.7), 
+					Colour(0.55,0.2,0.7), 
+					128*0.6, 0.2);

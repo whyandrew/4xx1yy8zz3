@@ -61,4 +61,3 @@ enum mode {
 extern mode _render_mode;
 extern int _reflect_rays;
 extern int _reflect_depth;
-extern int _refract_rays;

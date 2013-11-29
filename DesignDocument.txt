@@ -1,9 +1,9 @@
 *** Refraction ***
 
-- Add member to "ray" storing refractive index of medium ray is travelling in
+x Add member to "ray" storing refractive index of medium ray is travelling in
 	- rays starting the program set to be in air be default
 
-- Add refractive index member to "Material" struct
+x Add refractive index member to "Material" struct
 
 - When ray intersects, check ray.dir.dot(surfaceNormal)
 	assuming all normals are pointing OUTWARD of surface
