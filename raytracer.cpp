@@ -29,7 +29,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 4;
+		_reflect_depth = 1;
 		_reflect_rays = 1;
 		_reflect_fudge_factor = 6;
 	}
@@ -179,10 +179,10 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray,
 		{	// For shadow rays, can stop once intersection is detected
 			return;
 		}
-		else if (ray.intersection.t_value > 0.99)
+		else if (ray.intersection.t_value > 0.999)
 		{
 			// if intersection is beyond light, there is also no shadow
-			// Assume shadowRay dir is NOT normalize, so light is at t=0.99
+			// Assume shadowRay dir is NOT normalize, so light is at t=0.999
 			ray.intersection.none = true;
 			return;
 		}
@@ -222,10 +222,10 @@ void Raytracer::computeShading( Ray3D& ray,
 		if (_render_mode & MODE_SHADOW)
 		{
 			// Vector from intersect pt to light source
-			// DO NOT normalize this vect, so light pos is at ~ t=0.99
+			// DO NOT normalize this vect, so light pos is at ~ t=0.999
 			Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
 			// Advance the intersection point by a small delta
-			Point3D intersectPlusPt = ray.intersection.point + (0.01 * vec_toLight);
+			Point3D intersectPlusPt = ray.intersection.point + (0.001 * vec_toLight);
 			// Create a new ray to light source
 			Ray3D shadowRay(intersectPlusPt, vec_toLight);
 			// Check for any intersection in scene
@@ -284,13 +284,9 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 	// You'll want to call shadeRay recursively (with a different ray, 
 	// of course) here to implement reflection/refraction effects.  
 
-	// Generate secondary ray(s) from ray.intersection.point
-	// either follow normal, or more rays
-	// shaderay(secondary_ray);
-	// add secondary_ray.col to ray.col, with some deminishing factor?? try (1/t-value)
+		/*
 		Colour totalReflectColor(0.0, 0.0, 0.0);
-		bool b_done = false;
-		if (depth > 0 && !b_done)
+		if (depth > 0)
 		{
 			depth--;
 			//for (int i = 0; i < _reflect_rays; i++)
@@ -329,18 +325,79 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 				else
 				{
 					// Stop recursion if reflectway not hitting anything
-					b_done = true;
+					depth = 0;
 				}
 			}
 			totalReflectColor.clamp();
 		}
-
-		ray.col = ray.col + totalReflectColor;
+		*/
+		ray.col = ray.col + getReflectRayColor(ray, depth, modelToWorld, worldToModel);
+		ray.col = ray.col + getRefractRayColor(ray, depth, modelToWorld, worldToModel);
 		ray.col.clamp();
 		col = ray.col;
 	}
 	return col; 
 }	
+
+Colour Raytracer::getReflectRayColor( Ray3D& ray, int depth,
+						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{
+	Colour totalReflectColor(0.0, 0.0, 0.0);
+
+	if (depth > 0)
+	{
+		depth--;
+		Point3D intersectPtDelta = ray.origin + ((ray.intersection.t_value * 0.999) * ray.dir);
+				
+		Vector3D reflectRay_dir = ray.dir - 2 * ray.dir.dot(ray.intersection.normal) * ray.intersection.normal;
+
+		reflectRay_dir.normalize();
+		Ray3D reflectRay = Ray3D(intersectPtDelta, reflectRay_dir);
+		Colour reflectColor = shadeRay(reflectRay, depth, modelToWorld, worldToModel);
+		if (!reflectRay.intersection.none)
+		{
+			//Dampening + reflectivity affects factor
+					
+			if (ray.intersection.mat->reflect_factor >= 1.0)
+			{
+				// Assume reflect_factor of >= 1 is glass
+				// Minus the diffuse/ambient component of glass,
+				// so image doesn't get brighter than object
+				Colour mirror_image = ((reflectColor - 
+					ray.intersection.mat->diffuse) - ray.intersection.mat->ambient);
+				mirror_image.clamp();
+				totalReflectColor = totalReflectColor + mirror_image;
+			}
+			else 
+			{
+				// Beer's Law: I = Io * e^(-a*x)
+				// a = 1/reflect_factor, x = t_value / _reflect_fudge_factor
+				double factor = exp( 
+					-( (ray.intersection.t_value / _reflect_fudge_factor) 
+					/ ray.intersection.mat->reflect_factor));
+				totalReflectColor = totalReflectColor + (factor * reflectColor);
+			}
+		}
+		else
+		{
+			// Stop recursion if reflectRay not hitting anything
+			depth = 0;
+		}
+
+		totalReflectColor.clamp();
+	}
+
+	return totalReflectColor;
+}
+
+Colour Raytracer::getRefractRayColor( Ray3D& ray, int depth,
+						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{
+	Colour totalRefractColor(0.0, 0.0, 0.0);
+
+	return totalRefractColor;
+}
+
 
 void Raytracer::render( int width, int height, Point3D eye, Vector3D view, 
 		Vector3D up, double fov, char* fileName ) {
@@ -483,19 +540,61 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFLECT);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD  | MODE_REFLECT);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 300; 
-	int height = 200; 
+	int width = 600; 
+	int height = 400; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
 		height = atoi(argv[2]);
 	}
+
+	/********************************************************************
+		SCENE 0: 
+			Default scene from assignemnt
+	*********************************************************************/
+	/*
+
+        // Camera parameters.
+        Point3D eye(0, 0, 1);
+        Vector3D view(0, 0, -1);
+        Vector3D up(0, 1, 0);
+        double fov = 60;
+
+        // Defines a point light source.
+        raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
+                                Colour(0.9, 0.9, 0.9) ) );
+
+        // Add a unit square into the scene with material mat.
+		SceneDagNode* sphere = raytracer.addObject( new Hyperboloid2(), &mat_gold );
+        SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &mat_jade );
+        
+        // Apply some transformations to the unit square.
+        double factor1[3] = { 1.0, 2.0, 1.0 };
+        double factor2[3] = { 6.0, 6.0, 6.0 };
+        raytracer.translate(sphere, Vector3D(0, 0, -5));        
+        //raytracer.rotate(sphere, 'x', -45); 
+        raytracer.rotate(sphere, 'z', 45); 
+        raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+
+        raytracer.translate(plane, Vector3D(0, 0, -7));        
+        raytracer.rotate(plane, 'z', 45); 
+        raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+
+        // Render the scene, feel free to make the image smaller for
+        // testing purposes.        
+        raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
+        
+        // Render it from a different point of view.
+        Point3D eye2(4, 2, 1);
+        Vector3D view2(-4, -2, -6);
+        raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+		*/
 
 	/********************************************************************
 		SCENE 1: 
@@ -574,7 +673,7 @@ int main(int argc, char* argv[])
 	// SCENE 2:
 			"Room" with mirror hyperboloid
 	***********************************************************************/
-	/*
+	
 	double factor0[3] = {0.05, 0.05, 0.05};
 	double factor1[3] = {0.5, 0.5, 0.5};
 	double factor2[3] = { 8.0, 8.0, 8.0 };
@@ -617,11 +716,12 @@ int main(int argc, char* argv[])
 	raytracer.translate(sphere3, Vector3D(1, 2, -3));
 	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
 
-	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid(2.5), &mat_mirror);
+	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid2(2.5), &mat_mirror);
 	raytracer.translate(hyper, Vector3D(-0.5, 0, -4));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
 	raytracer.rotate(hyper, 'x', 70);
-	
+	raytracer.rotate(hyper, 'y', 45);
+
 	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_copper);
 	raytracer.translate(sphere1, Vector3D(-2, 1, -2.7));
 	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
@@ -641,13 +741,13 @@ int main(int argc, char* argv[])
 	Vector3D view2(-2, -2, -6);
 	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
 
-	*/
+	
 
 	/*********************************************************************
 	// SCENE 3:
 			"Parellelism"
 	***********************************************************************/
-	
+	/*
 	double factor0[3] = {0.2, 0.2, 0.2};
 	double factor1[3] = {0.5, 0.5, 0.5};
 	double factor2[3] = { 10.0, 8.0, 8.0 };
@@ -702,7 +802,10 @@ int main(int argc, char* argv[])
 	Vector3D view2(-2, -2, -6);
 	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
 
-	
+	*/
+
+
+
 	// Calculate time taken
 	duration = (std::clock() - start_time) / 1000.0;
 	std::cout << "Finished rendering in " << duration << " sec." << '\n' << '\n';

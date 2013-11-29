@@ -132,6 +132,16 @@ private:
 	Colour shadeRay( Ray3D& ray, int depth, 
 		Matrix4x4* modelToWorld, Matrix4x4* worldToModel ); 
 
+	// Return color of reflected ray
+	// Incident ray is populated other than its color
+	Colour getReflectRayColor( Ray3D& ray, int depth,
+						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+
+	// Return color of refracted ray, only needed if material is refractive
+	// Incident ray is populated other than its color
+	Colour getRefractRayColor( Ray3D& ray, int depth,
+						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+
 	// Constructs a view to world transformation matrix based on the
 	// camera parameters.
 	Matrix4x4 initInvViewMatrix( Point3D eye, Vector3D view, Vector3D up );

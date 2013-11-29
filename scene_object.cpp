@@ -97,9 +97,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		t_value = -ray_orig[2] / ray_dir[2];
 		if (t_value > 0.0) 
 		{
-			Point3D intersection(t_value * ray_dir[0] + ray_orig[0], 
-				t_value * ray_dir[1] + ray_orig[1],
-				0);
+			Point3D intersection = ray_orig + t_value * ray_dir;
 			if (abs(intersection[0]) <= 0.50 && abs(intersection[1]) <= 0.50)
 			{
 				// within +/- 0.5 is an intersection
@@ -209,7 +207,6 @@ bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 
 	bool b_isHit = false;
 	Vector3D D = worldToModel * ray.dir;
-	//D.normalize();
 	Point3D O = worldToModel * ray.origin;
 	double t_value;
 	double zRange = _zRange>0.0? _zRange: -(_zRange);
@@ -250,8 +247,11 @@ bool _Hyperboloid::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 				// f:  P.x^2 + P.y^2 - P.z^2 -1 = 0
 				// gradient(f) = ( 2P.x, 2P.y, -2Pz)
 				Vector3D normal(2 * hitPt[0], 2 * hitPt[1], -2 * hitPt[2]); 
+				//normal.normalize();
+				//ray.intersection.normal = transNorm( worldToModel, normal);
+				normal = transNorm( worldToModel, normal);
 				normal.normalize();
-				ray.intersection.normal = transNorm( worldToModel, normal);
+				ray.intersection.normal = normal;
 			}
 		}
 		else 
