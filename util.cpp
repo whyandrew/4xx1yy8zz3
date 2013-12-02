@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include "util.h"
+#include "bmp_io.h"
 
 Point3D::Point3D() {
 	m_data[0] = 0.0;
@@ -392,5 +393,23 @@ std::ostream& operator <<(std::ostream& os, const Matrix4x4& M) {
 		<< M[3][2] << " " << M[3][3] << "]";
 }
 
+void Material::activateTexture()
+{
+	bool error = false;
+	txt_width = 0;
+	txt_height = 0;
 
+	error = bmp_read(textureFile, &txt_width, &txt_height,
+		&txt_rbuffer, &txt_gbuffer, &txt_bbuffer);
 
+	if (txt_width == 0 || txt_height == 0)
+	{
+		error = true;
+	}
+
+	if (error)
+	{
+		printf("\nError loading texture file: %s\n", textureFile);
+		exit(1);
+	}
+}

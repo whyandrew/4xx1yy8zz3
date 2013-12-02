@@ -107,6 +107,8 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 					b_isHit = true;
 					ray.intersection.none = false;
 					ray.intersection.t_value = t_value;
+					ray.intersection.fp_textureMapping = &SceneObject::textureMapping;
+					ray.intersection.p_sceneObj = this;
 					if (!b_shadowRay)
 					{
 						Vector3D normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
@@ -181,6 +183,8 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			Point3D hitPt = ray_orig + (t_value * ray_dir);
 			ray.intersection.none = false;
 			ray.intersection.t_value = t_value;
+			ray.intersection.fp_textureMapping = &SceneObject::textureMapping;
+			ray.intersection.p_sceneObj = this;
 			if (!b_shadowRay)
 			{
 				ray.intersection.point = modelToWorld * hitPt;
@@ -371,3 +375,99 @@ void Hyperboloid2::construct()
 
 	p_objPList = p_List;
 }
+
+void UnitSquare::textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{
+	// Intersection pt (x,y) should be between -0,5 to 0.5
+	Point3D pt = *worldToModel * ray.intersection.point;
+	unsigned long int picWidth = ray.intersection.mat->txt_width;
+	unsigned long int picHeight = ray.intersection.mat->txt_height;
+	// Range from 0 to 1.0
+	double x = pt[0] + 0.5;
+	double y = pt[1] + 0.5;
+
+	// Range over size of texture e.g. 0 to 1024
+	x *= picWidth;
+	y *= picHeight;
+	
+	unsigned long int pixel = (unsigned long int)x * (picWidth) + (unsigned long int)y;
+	Material *mat = ray.intersection.mat;
+	Colour pixelCol = Colour(mat->txt_rbuffer[pixel] / 255.0,
+		mat->txt_gbuffer[pixel] / 255.0,
+		mat->txt_bbuffer[pixel] / 255.0);
+
+	ray.col = ray.col + pixelCol;
+
+}
+
+void UnitSphere::textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{
+	//printf("UnitShpere Texture\n");
+
+	// Map texture to sphere as vertical and horizontal components
+	// Ray must contain intersection.point 
+	// http://www.cs.unc.edu/~rademach/xroads-RT/RTarticle.html#glas89
+	Vector3D vert(0.0, 1.0, 0.0);
+	Vector3D horiz(1.0, 0.0, 0.0);
+	Point3D pt = *worldToModel * ray.intersection.point;
+	Vector3D ptVect(pt[0], pt[1], pt[2]);
+	ptVect.normalize();
+	double x, y;
+
+	//Angle between pt and vertical
+	double phi = acos( -ptVect.dot(vert) );
+	y = phi / M_PI;
+
+	// angle to horizontal
+	double theta = ( acos( ptVect.dot(horiz)/ sin(phi)) )/(2 * M_PI);
+	if ( horiz.dot( vert.cross(horiz) ) > 0)
+	{
+		x = theta;
+	}
+	else
+	{
+		x = 1 - theta;
+	}
+
+	//printf("(%f, %f)  ", x, y);
+	// Now get the corresponding pixel from texture
+	Material *p_mat = ray.intersection.mat;
+	unsigned long int pixel = 
+		((unsigned long int)(x * p_mat->txt_width)) + y;
+
+	if (pixel < 0 || pixel >= p_mat->txt_height * p_mat->txt_width )
+	{
+		printf("Pixel out of bound: %d\n", pixel);
+	}
+	/*
+	if (p_mat->txt_rbuffer[pixel] < 200)
+	{
+		printf("Red less than 200: %d\n", p_mat->txt_rbuffer[pixel]);
+	}
+	*/
+	Colour pixelCol = Colour((double)p_mat->txt_rbuffer[pixel] / 255.0 ,
+		(double)p_mat->txt_gbuffer[pixel] / 255.0, 
+		(double)p_mat->txt_bbuffer[pixel] / 255.0);
+
+
+	ray.col = ray.col + pixelCol;
+	//ray.col.clamp();
+}
+
+void _Hyperboloid::textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{}
+
+void _Circle::textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{}
+
+void Hyperboloid::textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{}
+
+void Hyperboloid2::textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+{}

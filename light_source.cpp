@@ -24,7 +24,8 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 	if (_render_mode & MODE_SIGNATURE)
 	{
 		// Just use plain diffuse color, disregard lights
-		ray.col = ray.intersection.mat->diffuse;
+		ray.col = ray.col + ray.intersection.mat->diffuse;
+		//ray.col.clamp();
 		//ray.col = ray.intersection.mat->specular;
 		return;
 	}

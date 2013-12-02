@@ -8,7 +8,9 @@
 
 ***********************************************************/
 
+#ifndef _UTIL_
 #include "util.h"
+#endif
 
 // All primitives should provide a intersection function.  
 // To create more primitives, inherit from SceneObject.
@@ -25,6 +27,9 @@ public:
 	// Return true if there is a solution
 	// Store the smaller t solution to p_tValue
 	static bool solveT(double A, double B, double C, double* p_tValue);
+
+	virtual void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel) = 0;
 };
 
 // Subclass for object composing of multiple objects
@@ -63,12 +68,16 @@ class UnitSquare : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
+	void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
 };
 
 class UnitSphere : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
+	void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
 };
 
 // Hyperboloid (open-ended) lays flat along z-axis
@@ -80,6 +89,9 @@ public :
 
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
+
+	void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
 private :
 	double _zRange;
 };
@@ -95,6 +107,9 @@ public :
 
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
+
+	void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
 private :
 	double _radius;
 	double _zvalue;
@@ -110,6 +125,9 @@ public :
 
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
+
+	void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
 private :
 	double _zRange;
 	SceneObject *p_objList[3];
@@ -139,4 +157,7 @@ private :
 public:
 	// Setup a open hyperboloid and 2 circle planes
 	void construct();
+
+	void textureMapping(Ray3D& ray,
+		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
 };

@@ -19,6 +19,8 @@
 #ifndef M_PI
 #define M_PI	3.14159265358979323846
 #endif
+class SceneObject;
+struct Ray3D;
 
 class Point3D {
 public:
@@ -129,22 +131,44 @@ Colour operator +(const Colour& u, const Colour& v);
 Colour operator -(const Colour& u, const Colour& v);
 std::ostream& operator <<(std::ostream& o, const Colour& c); 
 
-struct Material {
+class Material {
+public:
 	Material(char *name, Colour ambient, Colour diffuse, Colour specular, 
 		double exp, double reflective_factor ) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
 		specular_exp(exp), reflect_factor(reflective_factor),
-		refract_index(0.0), reflectance(0.0), name(name)
-		{}
+		refract_index(0.0), reflectance(0.0), name(name),
+		b_isTexture(false)
+		{};
 			
 	Material( char *name, Colour ambient, Colour diffuse, Colour specular, 
 		double exp, double reflective_factor, double refractive_index ) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
 		specular_exp(exp), reflect_factor(reflective_factor),
-		refract_index(refractive_index ), name(name)
+		refract_index(refractive_index ), name(name), 
+		b_isTexture(false)
 		{
 			reflectance = pow((refractive_index-1), 2) / pow((refractive_index+1), 2);
-		}
+		};
+
+	// For texture only. Non-transparent
+	Material( char *name, char *textureFileName,
+		Colour ambient, Colour diffuse, Colour specular,
+		double exp, double reflective_factor) :
+		ambient(ambient), diffuse(diffuse), specular(specular), 
+		specular_exp(exp), reflect_factor(reflective_factor),
+		name(name), b_isTexture(true), textureFile(textureFileName)
+		{
+			activateTexture();
+		};
+
+	~Material()
+		{
+			if (txt_rbuffer) delete txt_rbuffer;
+			if (txt_bbuffer) delete txt_bbuffer;
+			if (txt_gbuffer) delete txt_gbuffer;
+		};
+
 
 	// Ambient components for Phong shading.
 	Colour ambient; 
@@ -163,8 +187,20 @@ struct Material {
 	double reflectance;
 	// Name of material
 	char *name;
+	// Indicate if texture
+	bool b_isTexture;
+	// Name of bmp texture file
+	char *textureFile;
+	// texture size & buffer.
+	unsigned long int txt_width;
+	long int txt_height;
+	unsigned char* txt_rbuffer;
+	unsigned char* txt_gbuffer;
+	unsigned char* txt_bbuffer;
 
-
+private:
+	// Load texture file and save pixel into buffers
+	void activateTexture();
 };
 
 struct Intersection {
@@ -181,6 +217,10 @@ struct Intersection {
 	double t_value;	
 	// Set to true when no intersection has occured.
 	bool none;
+
+	// Function pointer for texture mapping
+	void (SceneObject::*fp_textureMapping)(Ray3D&, Matrix4x4*, Matrix4x4*);
+	SceneObject* p_sceneObj;
 };
 
 // Ray structure. 

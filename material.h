@@ -102,3 +102,21 @@ Material mat_light( "Light", Colour(1.0,1.0,1.0),
 					Colour(1.0,1.0,1.0), 
 					Colour(1.0,1.0,1.0), 
 					128*0.6, 0.2);
+
+Material texture_earth( "Texture Earth", "earth.bmp",
+					   Colour(0.2, 0.2, 0.2),
+					   Colour(0.0, 0.0 , 0.0),
+					   Colour(0.0, 0.0 , 0.0),
+					   128*0.2, 0.0);
+
+Material texture_moon( "Texture Moon", "moon.bmp",
+					   Colour(0.2, 0.2, 0.2),
+					   Colour(0.0, 0.0 , 0.0),
+					   Colour(0.0, 0.0 , 0.0),
+					   128*0.2, 0.0);
+
+Material texture_galaxy( "Texture Galaxy", "galaxy.bmp",
+					   Colour(0.2, 0.2, 0.2),
+					   Colour(0.0, 0.0 , 0.0),
+					   Colour(0.0, 0.0 , 0.0),
+					   128*0.2, 0.0);

@@ -290,6 +290,17 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 	{
 		computeShading(ray, modelToWorld, worldToModel); 
 
+		//**********************************
+		// TODO: Add texture mapping here?
+		
+		if (ray.intersection.mat->b_isTexture)
+		{
+			//(ray.intersection.fp_textureMapping)(ray, modelToWorld, worldToModel);
+			ray.intersection.p_sceneObj->textureMapping(ray, modelToWorld, worldToModel);
+		}
+
+		//**********************************
+
 		// Add effects from reflection and refraction
 		// Follow the general scheme on p306-7
 		if (depth > 0 && _render_mode & MODE_REFRACT)
@@ -735,9 +746,9 @@ int main(int argc, char* argv[])
 	double duration;
 	start_time = std::clock();
 
-	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
+	_render_mode = (mode)(MODE_SIGNATURE);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFRACT );
+	//_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFRACT );
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
@@ -879,8 +890,8 @@ int main(int argc, char* argv[])
 	//raytracer.addLightSource( new PointLight(Point3D(1, 1, 1), Colour(0.5,0.5,0.5)));
 	raytracer.addLightSource( new PointLight(Point3D(-1, 3, 1), Colour(1,1,1)));
 
-	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_blue );
-
+	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &texture_moon );
+	/*
 	SceneDagNode* plane_bottom = raytracer.addObject( new UnitSquare(), &mat_green);
 	SceneDagNode* plane_left = raytracer.addObject( new UnitSquare(), &mat_red);
 	SceneDagNode* plane_top = raytracer.addObject( new UnitSquare(), &mat_gold);
@@ -905,7 +916,7 @@ int main(int argc, char* argv[])
     raytracer.scale(plane_right, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_right, 'y', -90);
 
-	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_yellow );
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &texture_moon );
 	raytracer.translate(sphere2, Vector3D(2, -1, -5));
 	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
 		
@@ -913,16 +924,16 @@ int main(int argc, char* argv[])
 	raytracer.translate(sphere3, Vector3D(1, -2, -5));
 	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
 
-	SceneDagNode* hyper = raytracer.addObject( new UnitSphere(), &mat_diamond);
+	SceneDagNode* hyper = raytracer.addObject( new UnitSphere(), &texture_earth);
 	raytracer.translate(hyper, Vector3D(0, 0, -1));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
-	raytracer.rotate(hyper, 'x', 60);
+	//raytracer.rotate(hyper, 'x', 60);
 	//raytracer.rotate(hyper, 'y', 45);
 
 	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_light);
 	raytracer.translate(sphere1, Vector3D(-2, 0, -4));
 	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
-
+	*/
 	// Camera parameters.
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
@@ -936,7 +947,7 @@ int main(int argc, char* argv[])
 	// Render it from a different point of view.
 	Point3D eye2(2, 2, 1);
 	Vector3D view2(-2, -2, -6);
-	//raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
 
 	
 
