@@ -22,7 +22,8 @@
 mode _render_mode = MODE_SIGNATURE;
 int _reflect_rays;
 int _reflect_depth;
-float _reflect_fudge_factor;
+double _reflect_fudge_factor;
+double _refract_global_factor;
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
@@ -30,6 +31,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	{
 		_reflect_depth = 3;
 		_reflect_fudge_factor = 6;
+		_refract_global_factor = 2;
 	}
 }
 
@@ -278,25 +280,91 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel) {
 	Colour col(0.0, 0.0, 0.0); 
 	SceneDagNode *local_root = _root;
+	bool b_internalReflection = false;
 	// All input ray should have ray.refractIndex set already
 	traverseScene(local_root, ray, modelToWorld, worldToModel, false); 
 	
 	// Don't bother shading if the ray didn't hit 
 	// anything.
-	if (!ray.intersection.none) {
+	if (!ray.intersection.none && depth >= 0) 
+	{
 		computeShading(ray, modelToWorld, worldToModel); 
- 
-	// You'll want to call shadeRay recursively (with a different ray, 
-	// of course) here to implement reflection/refraction effects.  
 
-		if (_render_mode & MODE_REFLECT)
+		// Add effects from reflection and refraction
+		// Follow the general scheme on p306-7
+		if (depth > 0 && _render_mode & MODE_REFRACT)
 		{
-			ray.col = ray.col + getReflectRayColor(ray, depth, modelToWorld, worldToModel);
+			double reflectance;
+			double rindex = ray.intersection.mat->refract_index;
+			double dotProd;
+			Ray3D refractRay;
+			Ray3D reflectRay;
+			double cosTheta;
+			// A bit of a hack, to allow adjusting global refract & reflect effect
+			double refractBeerCoeff;
+			double reflectBeerCoeff;
+
+			if ( rindex > 1.0)
+			{
+				// ray intersect transparent object
+				reflectRay = getReflectRay(ray);
+				
+				dotProd = ray.intersection.normal.dot(ray.dir);
+				if (dotProd < 0.0)
+				{
+					// Ray hits OUTSIDE of object
+					// do refract, get refract.dir
+					getRefractRay(ray, &refractRay, true);
+					cosTheta = -dotProd;
+					// TODO: why = 1.0?? Assume no absorbance in air?
+					refractBeerCoeff = 1.0;
+					reflectBeerCoeff = 1.0;
+				}
+				else
+				{
+					// Ray hits INSIDE of object
+					refractBeerCoeff = exp(-ray.intersection.t_value) / _refract_global_factor;
+					reflectBeerCoeff = exp(-ray.intersection.t_value) / _reflect_fudge_factor;
+					
+					if (getRefractRay(ray, &refractRay, false))
+					{
+						// Have refraction
+						cosTheta = refractRay.dir.dot(ray.intersection.normal);
+					}
+					else
+					{
+						// Total interal reflection, no refraction
+						ray.col = ray.col + reflectBeerCoeff * 
+							shadeRay(reflectRay, depth - 1, modelToWorld, worldToModel);
+					}
+				}
+
+				double r0 = ray.intersection.mat->reflectance;
+				reflectance = r0 + (1 - r0) * pow((1 - cosTheta), 5);
+
+				ray.col = ray.col + 
+					refractBeerCoeff * (1 - reflectance) *
+					shadeRay(refractRay, depth - 1, modelToWorld, worldToModel);
+
+				if (_render_mode & MODE_REFLECT)
+				{
+					ray.col = ray.col +
+						reflectBeerCoeff * reflectance *
+						shadeRay(reflectRay, depth - 1, modelToWorld, worldToModel);
+				}
+			}
+			else
+			{
+				// intersect opaque object, reflect only
+				ray.col = ray.col + 
+					getReflectRayColor(ray, depth - 1, modelToWorld, worldToModel);
+			}
+
 		}
-
-		if (_render_mode & MODE_REFRACT)
+		else if (_render_mode & MODE_REFLECT)
 		{
-			ray.col = ray.col + getRefractRayColor(ray, depth, modelToWorld, worldToModel);
+			ray.col = ray.col + 
+					getReflectRayColor(ray, depth - 1, modelToWorld, worldToModel);
 		}
 
 		ray.col.clamp();
@@ -305,24 +373,77 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 	return col; 
 }	
 
-Colour Raytracer::getReflectRayColor( Ray3D& ray, int depth,
-						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+Ray3D Raytracer::getReflectRay( Ray3D& ray)
+{
+	Vector3D rayDir = ray.dir;
+	rayDir.normalize();
+	Vector3D reflectRay_dir = rayDir - 2 * rayDir.dot(ray.intersection.normal) * ray.intersection.normal;
+	reflectRay_dir.normalize();
+	Point3D intersectPtDelta = ray.intersection.point + ( 0.001 * reflectRay_dir);
+	Ray3D reflectRay = Ray3D(intersectPtDelta, reflectRay_dir);
+
+	return reflectRay;
+}
+
+
+bool Raytracer::getRefractRay( Ray3D& ray, Ray3D *refractRay, bool b_hitOutside)
+{
+	bool b_haveRefract = true;
+
+	Vector3D rDir = ray.dir;
+	rDir.normalize();
+
+	Vector3D rNormal = b_hitOutside? ray.intersection.normal: -ray.intersection.normal;
+	rNormal.normalize();
+	
+	double inRI = ray.refract_index;
+	double outRI = ray.intersection.mat->refract_index;
+	//ratio of in/out refractive index
+	double ratioRI;
+	b_hitOutside? ratioRI = (inRI / outRI): (outRI / inRI);
+
+	// TODO: have to switch in/out RI depending on b_hitOutside
+	//			since theta is always angle from air (or just less RI side?).
+
+	double cosTheta = rDir.dot(rNormal);
+
+	double cosPhiSq = 1 - ( (1 - cosTheta * cosTheta) * pow(ratioRI, 2) );
+	Vector3D refractDir;
+
+	if (cosPhiSq < 0.0)
+	{
+		// Total internal reflection
+		b_haveRefract = false;
+	}
+	else
+	{
+		refractDir = ( ratioRI  * (rDir - (cosTheta * rNormal))) 
+			- (sqrt(cosPhiSq) * rNormal);
+		refractDir.normalize();
+	}
+
+	if (b_haveRefract)
+	{
+		Point3D intersectDelta = ray.intersection.point + 0.001 * refractDir;
+		*refractRay = Ray3D(intersectDelta, refractDir);
+	}
+
+	return b_haveRefract;
+}
+
+Colour Raytracer::getReflectRayColor( 
+	Ray3D& ray, 
+	int depth,
+	Matrix4x4* modelToWorld, 
+	Matrix4x4* worldToModel)
 {
 	Colour totalReflectColor(0.0, 0.0, 0.0);
 
 	if (depth > 0)
 	{
-		depth--;
-		/*
-		Point3D intersectPtDelta = ray.origin + ((ray.intersection.t_value * 0.999) * ray.dir);
-		Vector3D reflectRay_dir = ray.dir - 2 * ray.dir.dot(ray.intersection.normal) * ray.intersection.normal;
-		reflectRay_dir.normalize();
-		Ray3D reflectRay = Ray3D(intersectPtDelta, reflectRay_dir);*/
+		//depth--; // Handle depth decrement in "shadeRay"
 
-		Vector3D reflectRay_dir = ray.dir - 2 * ray.dir.dot(ray.intersection.normal) * ray.intersection.normal;
-		reflectRay_dir.normalize();
-		Point3D intersectPtDelta = ray.intersection.point + ( 0.001 * reflectRay_dir);
-		Ray3D reflectRay = Ray3D(intersectPtDelta, reflectRay_dir);
+		Ray3D reflectRay = getReflectRay(ray);
 
 		Colour reflectColor = shadeRay(reflectRay, depth, modelToWorld, worldToModel);
 		if (!reflectRay.intersection.none)
@@ -361,14 +482,22 @@ Colour Raytracer::getReflectRayColor( Ray3D& ray, int depth,
 	return totalReflectColor;
 }
 
-Colour Raytracer::getRefractRayColor( Ray3D& ray, int depth,
-						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+/*
+Colour Raytracer::getRefractRayColor( 
+	Ray3D& ray, 
+	int depth,					   
+	Matrix4x4* modelToWorld, 
+	Matrix4x4* worldToModel, 
+	bool *internalReflect)
 {
 	// Ray must intersect an object when this function is called
 
 	Colour totalRefractColor(0.0, 0.0, 0.0);
+	Vector3D outDir;
+	Ray3D refractRay;
 	bool b_done = false;
 	bool b_hitOutside = false;
+	bool b_internalReflect = false;
 
 	if (depth > 0 )
 	{
@@ -401,7 +530,7 @@ Colour Raytracer::getRefractRayColor( Ray3D& ray, int depth,
 
 		if (!b_done)
 		{
-			// TODO: calculate refract dir, p305
+			// Calculate refract dir, p305
 			Vector3D rDir = ray.dir;
 			Vector3D rNormal = ray.intersection.normal;
 			rNormal.normalize();
@@ -411,15 +540,41 @@ Colour Raytracer::getRefractRayColor( Ray3D& ray, int depth,
 			double outRI = ray.intersection.mat->refract_index;
 			double cosOutSq = 1 - (inRI * inRI * (1 - cosIn * cosIn) / (outRI * outRI));
 
-
-
+			if (cosOutSq < 0.0)
+			{
+				// Total internal reflection
+				// TODO: then what?? Create reflective ray instead?
+				// this kinda inefficient.
+				//totalRefractColor = getReflectRayColor(ray, depth, modelToWorld, worldToModel);
+				b_internalReflect = true;
+				b_done = true;
+			}
+			else
+			{
+				outDir = ((inRI / outRI)  * (rDir - (cosIn * rNormal))) 
+					- (sqrt(cosOutSq) * rNormal);
+				outDir.normalize();
+			}
+		}
 			
-			Vector3D refractRay_dir;
-			// TODO: some Snell's law here to set refractRay direction
+		if (!b_done)
+		{
+			Point3D intersectDelta = ray.intersection.point + 0.001 * outDir;
+			refractRay = Ray3D(intersectDelta, outDir);
+			Colour refractColor = shadeRay(refractRay, depth, modelToWorld, worldToModel);
+			// Beer's Law
+			/*
+			double factor = exp( 
+				-( (ray.intersection.t_value / _reflect_fudge_factor) 
+				/ ray.intersection.mat->reflect_factor));
+			totalReflectColor = totalReflectColor + (factor * reflectColor); 
+			double factor = exp( -(ray.intersection.t_value / _refract_global_factor / ray
+
+		}
+	
 
 
-
-			refractRay_dir.normalize();
+		
 
 			// ray.refractIndex						== index of medium Ray is in 
 			// ray.intersection.mat->refractIndex	== index of object it now hits
@@ -435,7 +590,7 @@ Colour Raytracer::getRefractRayColor( Ray3D& ray, int depth,
 
 	return totalRefractColor;
 }
-
+*/
 
 void Raytracer::render( int width, int height, Point3D eye, Vector3D view, 
 		Vector3D up, double fov, char* fileName ) {
@@ -580,7 +735,7 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD  | MODE_SHADOW |MODE_REFLECT);
+	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD  | MODE_REFLECT );
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
@@ -756,7 +911,7 @@ int main(int argc, char* argv[])
 	raytracer.translate(sphere3, Vector3D(1, 2, -3));
 	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
 
-	SceneDagNode* hyper = raytracer.addObject( new Hyperboloid2(2.5), &mat_mirror);
+	SceneDagNode* hyper = raytracer.addObject( new UnitSphere(), &mat_diamond);
 	raytracer.translate(hyper, Vector3D(-0.5, 0, -4));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
 	raytracer.rotate(hyper, 'x', 60);

@@ -132,6 +132,14 @@ private:
 	Colour shadeRay( Ray3D& ray, int depth, 
 		Matrix4x4* modelToWorld, Matrix4x4* worldToModel ); 
 
+	// Return reflected ray given incident ray
+	// Ray's intersect struct must be populated
+	Ray3D getReflectRay( Ray3D& ray);
+
+	// Return true if refracted ray is needed & stored.
+	// Ray's intersect struct must be populated
+	bool getRefractRay( Ray3D& ray, Ray3D *refractRay, bool b_hitOutside);
+
 	// Return color of reflected ray
 	// Incident ray is populated other than its color
 	Colour getReflectRayColor( Ray3D& ray, int depth,
@@ -140,7 +148,8 @@ private:
 	// Return color of refracted ray, only needed if material is refractive
 	// Incident ray is populated other than its color
 	Colour getRefractRayColor( Ray3D& ray, int depth,
-						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+						   Matrix4x4* modelToWorld, Matrix4x4* worldToModel,
+						   bool *internalReflection);
 
 	// Constructs a view to world transformation matrix based on the
 	// camera parameters.
