@@ -29,7 +29,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 3;
+		_reflect_depth = 6;
 		_reflect_fudge_factor = 6;
 		_refract_global_factor = 2;
 	}
@@ -323,9 +323,11 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 				else
 				{
 					// Ray hits INSIDE of object
-					refractBeerCoeff = exp(-ray.intersection.t_value) / _refract_global_factor;
-					reflectBeerCoeff = exp(-ray.intersection.t_value) / _reflect_fudge_factor;
-					
+					//refractBeerCoeff = exp(-ray.intersection.t_value) / _refract_global_factor;
+					//reflectBeerCoeff = exp(-ray.intersection.t_value) / _reflect_fudge_factor;
+					refractBeerCoeff = 1.0;
+					reflectBeerCoeff = 1.0;
+
 					if (getRefractRay(ray, &refractRay, false))
 					{
 						// Have refraction
@@ -340,7 +342,7 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 				}
 
 				double r0 = ray.intersection.mat->reflectance;
-				reflectance = r0 + (1 - r0) * pow((1 - cosTheta), 5);
+				reflectance = r0 + ((1 - r0) * pow( (1 - cosTheta), 5 ));
 
 				ray.col = ray.col + 
 					refractBeerCoeff * (1 - reflectance) *
@@ -400,7 +402,7 @@ bool Raytracer::getRefractRay( Ray3D& ray, Ray3D *refractRay, bool b_hitOutside)
 	double outRI = ray.intersection.mat->refract_index;
 	//ratio of in/out refractive index
 	double ratioRI;
-	b_hitOutside? ratioRI = (inRI / outRI): (outRI / inRI);
+	ratioRI = b_hitOutside?  (inRI / outRI): (outRI / inRI);
 
 	// TODO: have to switch in/out RI depending on b_hitOutside
 	//			since theta is always angle from air (or just less RI side?).
@@ -735,14 +737,14 @@ int main(int argc, char* argv[])
 
 	//_render_mode = (mode)(MODE_SIGNATURE | MODE_MULTITHREAD);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
-	_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD  | MODE_REFLECT );
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFRACT );
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
 	int width = 500; 
-	int height = 300; 
+	int height = 400; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -887,7 +889,7 @@ int main(int argc, char* argv[])
     raytracer.translate(plane_back, Vector3D(0, 0, -7));        
     raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
 
-	raytracer.translate(plane_bottom, Vector3D(0, -2, -3));        
+	raytracer.translate(plane_bottom, Vector3D(0, -4, -3));        
     raytracer.scale(plane_bottom, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_bottom, 'x', -90);
 
@@ -904,28 +906,28 @@ int main(int argc, char* argv[])
 	raytracer.rotate(plane_right, 'y', -90);
 
 	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &mat_yellow );
-	raytracer.translate(sphere2, Vector3D(2, 0, -2.5));
+	raytracer.translate(sphere2, Vector3D(2, -1, -5));
 	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
 		
 	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_jade );
-	raytracer.translate(sphere3, Vector3D(1, 2, -3));
+	raytracer.translate(sphere3, Vector3D(1, -2, -5));
 	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
 
 	SceneDagNode* hyper = raytracer.addObject( new UnitSphere(), &mat_diamond);
-	raytracer.translate(hyper, Vector3D(-0.5, 0, -4));
+	raytracer.translate(hyper, Vector3D(0, 0, -1));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
 	raytracer.rotate(hyper, 'x', 60);
 	//raytracer.rotate(hyper, 'y', 45);
 
-	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_copper);
-	raytracer.translate(sphere1, Vector3D(-2, 1, -2.7));
+	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_light);
+	raytracer.translate(sphere1, Vector3D(-2, 0, -4));
 	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
 
 	// Camera parameters.
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
 	Vector3D up(0, 1, 0);
-	double fov = 40;
+	double fov = 60;
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
