@@ -16,7 +16,8 @@
 // differently.
 class LightSource {
 public:
-	virtual void shade( Ray3D&, bool b_inShadow) = 0;
+	// percentLight is the light ray gets that is NOT in shadow
+	virtual void shade( Ray3D&, double percentLight) = 0;
 	virtual Point3D get_position() const = 0; 
 };
 
@@ -29,7 +30,7 @@ public:
 	PointLight( Point3D pos, Colour ambient, Colour diffuse, Colour specular ) 
 	: _pos(pos), _col_ambient(ambient), _col_diffuse(diffuse), 
 	_col_specular(specular) {}
-	void shade( Ray3D& ray, bool b_inShadow );
+	void shade( Ray3D& ray, double percentLight );
 	Point3D get_position() const { return _pos; }
 	
 private:
@@ -54,6 +55,9 @@ enum mode {
 	MODE_REFLECT = 1 << 10,
 	MODE_REFRACT = 1 << 11,
 	MODE_SHADOW = 1 << 12,
+	MODE_SOFTSHADOW_LOW = 1 << 13,
+	MODE_SOFTSHADOW_HIGH = 1 << 14,
+	MODE_SOFTSHADOW_EXTREME = 1 << 15
 
 };
 	

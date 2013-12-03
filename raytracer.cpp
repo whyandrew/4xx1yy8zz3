@@ -217,6 +217,47 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray,
 	*modelToWorld = *modelToWorld * node->invtrans;
 }
 
+// Return a randomized point near the given center
+// on a plane perpendicular to the incident direction
+// radius is the max linear distance allowed from center point
+Point3D getRandomPt(Vector3D inDir, Point3D center, double radius)
+{
+	Point3D retPt;
+	// Randomized radius and angle
+	double ranAngle, ranRadius;
+	ranRadius = (double)rand() / RAND_MAX;
+	ranRadius = ranRadius * radius;
+	ranAngle = (double)rand() / RAND_MAX;
+	ranAngle = ranAngle * 2.0 * M_PI;
+	printf("cos-ranAngle = %f\n", ranRadius * sin(ranAngle));
+	double u_coor = ( ranRadius * cos(ranAngle) );// - ( radius / 2.0 );
+	double v_coor = ( ranRadius * sin(ranAngle) );// - ( radius / 2.0 );
+	/*
+	if (u_coor < (-radius/2.0) || u_coor > (radius/2.0))
+		printf("U_coor = %f \n", u_coor);
+	if (v_coor < (-radius/2.0) || v_coor > (radius/2.0))
+		printf("V_coor = %f \n", v_coor); */
+	// Get orthogonal vectors pair to incident vector
+	Vector3D vect01;
+	if (inDir[1] != 0 || inDir[2] != 0)
+	{
+		vect01 = Vector3D(1.0, 0.0, 0.0);
+	}
+	else
+	{
+		vect01 = Vector3D(0.0, 1.0, 0.0);
+	}
+	
+	Vector3D u_vect = vect01.cross(inDir);
+	Vector3D v_vect = u_vect.cross(inDir);
+	u_vect.normalize();
+	v_vect.normalize();
+
+	retPt = center + (u_coor * u_vect) + (v_coor * v_vect);
+
+	return retPt;
+}
+
 void Raytracer::computeShading( Ray3D& ray, 
 							   Matrix4x4* modelToWorld, Matrix4x4* worldToModel ) {
 	LightListNode* curLight = _lightSource;
@@ -226,28 +267,81 @@ void Raytracer::computeShading( Ray3D& ray,
 
 		// Implement shadows.
 		// ray should contain information about intersection now
-		if (_render_mode & MODE_SHADOW)
+		if (_render_mode &
+			(MODE_SHADOW | MODE_SOFTSHADOW_HIGH | MODE_SOFTSHADOW_LOW | MODE_SOFTSHADOW_EXTREME))
 		{
 			// Vector from intersect pt to light source
 			// DO NOT normalize this vect, so light pos is at ~ t=0.999
 			Vector3D vec_toLight = (curLight->light->get_position() - ray.intersection.point);
 			// Advance the intersection point by a small delta
-			Point3D intersectPlusPt = ray.intersection.point + (0.001 * vec_toLight);
-			// Create a new ray to light source
-			Ray3D shadowRay(intersectPlusPt, vec_toLight);
-			// Check for any intersection in scene
-			SceneDagNode *local_root = _root;
-			traverseScene(local_root, shadowRay, modelToWorld, worldToModel, true);
-		
-			// Shade original ray, depending if in shadow
-			// If shadowRay hits something, then in shadow.
-			curLight->light->shade(ray, !shadowRay.intersection.none);
+			Point3D deltaPt = ray.intersection.point + (0.001 * vec_toLight);
+			double percentLight = 0;
+			
+			// If the FIRST 10 consecutive shadowRays not in shadow
+			// assume the point is not in shadow to save computation time
+			int countNotShadow = 0;
+			const int maxNotShadow = 15;
 
+			if (_render_mode & 
+				(MODE_SOFTSHADOW_HIGH | MODE_SOFTSHADOW_LOW | MODE_SOFTSHADOW_EXTREME) )
+			{
+				// Implement area light, which always faces the incident ray
+				// General randomized light positions based on light->pos()
+				// 10 or 50 or 200 rays for shawdow checking
+				int numRays;
+				if (_render_mode & MODE_SOFTSHADOW_EXTREME)
+					numRays = 500;
+				else if (_render_mode & MODE_SOFTSHADOW_HIGH)
+					numRays = 50;
+				else 
+					numRays = 10;
+
+				double radius = 0.5;
+
+				for (int i = 0; i < numRays; i++, countNotShadow < maxNotShadow)
+				{
+					Point3D ranLightPOS 
+						= getRandomPt(vec_toLight, curLight->light->get_position(), radius);
+					Vector3D shadowRayDir = (ranLightPOS - deltaPt);
+					Ray3D shadowRay(deltaPt, shadowRayDir);
+					SceneDagNode *local_root = _root;
+					traverseScene(local_root, shadowRay, modelToWorld, worldToModel, true);
+					if (shadowRay.intersection.none)
+					{
+						percentLight += 1.0;
+						if (i < maxNotShadow)
+						{ countNotShadow++; }
+					}
+				}
+				
+				// Calculate average light percentage
+				if (countNotShadow >= maxNotShadow)
+				{
+					percentLight = 1.0;
+				}
+				else
+				{
+					percentLight = percentLight / numRays;
+				}
+			}
+			else // (_render_mode & MODE_SHADOW)
+			{
+				// Create a new ray to light source
+				Ray3D shadowRay(deltaPt, vec_toLight);
+				// Check for any intersection in scene
+				SceneDagNode *local_root = _root;
+				traverseScene(local_root, shadowRay, modelToWorld, worldToModel, true);
+				// Shade original ray, depending if in shadow
+				// If shadowRay hits something, then in shadow.
+				percentLight = (shadowRay.intersection.none)? 1.0: 0.0;
+			}
+
+			curLight->light->shade(ray, percentLight);
 		}
 		else
 		{
 			// not in MODE_SHADOW
-			curLight->light->shade(ray, false);
+			curLight->light->shade(ray, 1.0);
 		}
 
 		curLight = curLight->next;
@@ -745,18 +839,20 @@ int main(int argc, char* argv[])
 	std::clock_t start_time;
 	double duration;
 	start_time = std::clock();
+	// seed random
+	srand(time(0));
 
 	//_render_mode = (mode)(MODE_SIGNATURE);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
 	//_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFRACT );
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_SSAA16);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SOFTSHADOW_EXTREME | MODE_SSAA4);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 1280; 
-	int height = 960; 
+	int width = 600; 
+	int height = 400; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -885,24 +981,18 @@ int main(int argc, char* argv[])
 	
 	double factor0[3] = {0.3, 0.3, 0.3};
 	double factor1[3] = {0.5, 0.5, 0.5};
-	double factor2[3] = {35.0, 28.0, 1.0 };
+	double factor2[3] = {8.0, 8.0, 8.0 };
 	double factor3[3] = {1.5, 1.5, 1.5};
 
-	//raytracer.addLightSource( new PointLight(Point3D(1, 1, 1), Colour(0.5,0.5,0.5)));
-	raytracer.addLightSource( new PointLight(Point3D(-1, 0.0, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1, 0.01, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1, 0.02, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1.01, 0.0, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1.01, 0.01, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1.01, 0.02, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1.02, 0.0, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1.02, 0.01, 1), Colour(0.10, 0.10, 0.1)));
-	raytracer.addLightSource( new PointLight(Point3D(-1.02, 0.02, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-3, 5, -1), Colour(1,1,1)));
 
-	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &texture_galaxy);
-    raytracer.translate(plane_back, Vector3D(0, 0, -18));        
+
+	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_yellow);
+	raytracer.translate(plane_back, Vector3D(0, -0.5, -3));        
     raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
+	raytracer.rotate(plane_back, 'x', -90);
 
+	/*
 	SceneDagNode* sphere4 = raytracer.addObject( new UnitSphere(), &texture_neptune );
 	raytracer.translate(sphere4, Vector3D(2, 2.5, -5));
 	raytracer.scale(sphere4, Point3D(0,0,0), factor1);
@@ -915,9 +1005,9 @@ int main(int argc, char* argv[])
 	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &texture_moon );
 	raytracer.translate(sphere2, Vector3D(2.5, -1.5, -4.5));
 	raytracer.scale(sphere2, Point3D(0,0,0), factor0);
-
+	*/
 	SceneDagNode* hyper = raytracer.addObject( new UnitSphere(), &texture_earth);
-	raytracer.translate(hyper, Vector3D(0, 0, -1));
+	raytracer.translate(hyper, Vector3D(-0.3, 0, -1));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
 	raytracer.rotate(hyper, 'z', 15);
 	raytracer.rotate(hyper, 'x', 15);
@@ -927,7 +1017,7 @@ int main(int argc, char* argv[])
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
 	Vector3D up(0, 1, 0);
-	double fov = 55;
+	double fov = 41;
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	

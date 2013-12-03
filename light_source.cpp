@@ -12,7 +12,7 @@
 #include "light_source.h"
 #include "scene_object.h"
 
-void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
+void PointLight::shade( Ray3D& ray, double percentLight ) {
 	// TODO: implement this function to fill in values for ray.col 
 	// using phong shading.  Make sure your vectors are normalized, and
 	// clamp colour values to 1.0.
@@ -58,17 +58,17 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 	vec_light.normalize();
 
 	// Diffuse
-	if (_render_mode & MODE_DIFFUSE && !b_inShadow)
+	if (_render_mode & MODE_DIFFUSE && percentLight > 0.0)
 	{
 		// Add diffuse, mat*light*max(0,factor), factor = normal(dot)light
-		double factor = objNormal.dot( vec_light );
+		double factor = objNormal.dot( vec_light ) * percentLight;
 		factor = factor>0.0? factor: 0.0;
 		newColor = newColor + ( factor * (_col_diffuse * objMat->diffuse *
 			(b_texture? textureColor: fullColor) ));
 	}
 
 	// Specular
-	if (_render_mode & MODE_SPECULAR && !b_inShadow)
+	if (_render_mode & MODE_SPECULAR && percentLight > 0.0)
 	{
 		// Add specular, mat*light*max(0,factor), factor = -ray(dot)reflect
 		// reflect = 2(light(dot)normal)*normal - light
@@ -76,7 +76,7 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 		vec_reflect.normalize();
 		Vector3D vect_backRay = -ray.dir;
 		vect_backRay.normalize();
-		double factor = vect_backRay.dot(vec_reflect);
+		double factor = vect_backRay.dot(vec_reflect) * percentLight;
 		factor = factor>0.0? factor: 0.0;
 		newColor = newColor + ( pow(factor, objMat->specular_exp) * 
 			_col_specular * objMat->specular *

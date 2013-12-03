@@ -184,3 +184,5 @@ private:
 	//Matrix4x4 _modelToWorld;
 	//Matrix4x4 _worldToModel;
 };
+
+Point3D getRandomPt(Vector3D inDir, Point3D center, double radius);
