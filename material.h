@@ -103,20 +103,41 @@ Material mat_light( "Light", Colour(1.0,1.0,1.0),
 					Colour(1.0,1.0,1.0), 
 					128*0.6, 0.2);
 
+// For texture, the colour components are multipled to texture
+// Set colors to 0.0 if not to be affected by that light component
+
 Material texture_earth( "Texture Earth", "earth.bmp",
-					   Colour(0.2, 0.2, 0.2),
-					   Colour(0.0, 0.0 , 0.0),
+					   Colour(0.05, 0.05, 0.05),
+					   Colour(1.0, 1.0 , 1.0),
 					   Colour(0.0, 0.0 , 0.0),
 					   128*0.2, 0.0);
 
 Material texture_moon( "Texture Moon", "moon.bmp",
-					   Colour(0.2, 0.2, 0.2),
-					   Colour(0.0, 0.0 , 0.0),
+					   Colour(0.15, 0.15, 0.15),
+					   Colour(0.8, 0.8 , 0.8),
 					   Colour(0.0, 0.0 , 0.0),
 					   128*0.2, 0.0);
 
 Material texture_galaxy( "Texture Galaxy", "galaxy.bmp",
-					   Colour(0.2, 0.2, 0.2),
+					   Colour(1.0, 1.0, 1.0),
 					   Colour(0.0, 0.0 , 0.0),
+					   Colour(0.0, 0.0 , 0.0),
+					   128*0.2, 0.0);
+
+Material texture_sun( "Texture Sun", "sun.bmp",
+					   Colour(1.0, 1.0, 1.0),
+					   Colour(1.0, 1.0, 1.0),
+					   Colour(0.0, 0.0 , 0.0),
+					   128*0.2, 0.0);
+
+Material texture_jupiter( "Texture Jupiter", "jupiter.bmp",
+					   Colour(0.05, 0.05, 0.05),
+					   Colour(0.8, 0.8 , 0.8),
+					   Colour(0.0, 0.0 , 0.0),
+					   128*0.2, 0.0);
+
+Material texture_neptune( "Texture neptune", "neptune.bmp",
+					   Colour(0.05, 0.05, 0.05),
+					   Colour(0.8, 0.8 , 0.8),
 					   Colour(0.0, 0.0 , 0.0),
 					   128*0.2, 0.0);

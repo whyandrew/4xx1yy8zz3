@@ -292,13 +292,13 @@ Colour Raytracer::shadeRay( Ray3D& ray, int depth,
 
 		//**********************************
 		// TODO: Add texture mapping here?
-		
+		/*
 		if (ray.intersection.mat->b_isTexture)
 		{
-			//(ray.intersection.fp_textureMapping)(ray, modelToWorld, worldToModel);
-			ray.intersection.p_sceneObj->textureMapping(ray, modelToWorld, worldToModel);
+			//(ray.intersection.fp_textureMapping)(ray);
+			ray.intersection.p_sceneObj->textureMapping(ray);
 		}
-
+		*/
 		//**********************************
 
 		// Add effects from reflection and refraction
@@ -746,16 +746,17 @@ int main(int argc, char* argv[])
 	double duration;
 	start_time = std::clock();
 
-	_render_mode = (mode)(MODE_SIGNATURE);
+	//_render_mode = (mode)(MODE_SIGNATURE);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
 	//_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFRACT );
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_SSAA16);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 500; 
-	int height = 400; 
+	int width = 1280; 
+	int height = 960; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -882,63 +883,51 @@ int main(int argc, char* argv[])
 			"Room" with mirror hyperboloid
 	***********************************************************************/
 	
-	double factor0[3] = {0.05, 0.05, 0.05};
+	double factor0[3] = {0.3, 0.3, 0.3};
 	double factor1[3] = {0.5, 0.5, 0.5};
-	double factor2[3] = { 8.0, 8.0, 8.0 };
-	double factor3[3] = {2, 2, 2};
+	double factor2[3] = {35.0, 28.0, 1.0 };
+	double factor3[3] = {1.5, 1.5, 1.5};
 
 	//raytracer.addLightSource( new PointLight(Point3D(1, 1, 1), Colour(0.5,0.5,0.5)));
-	raytracer.addLightSource( new PointLight(Point3D(-1, 3, 1), Colour(1,1,1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1, 0.0, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1, 0.01, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1, 0.02, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1.01, 0.0, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1.01, 0.01, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1.01, 0.02, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1.02, 0.0, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1.02, 0.01, 1), Colour(0.10, 0.10, 0.1)));
+	raytracer.addLightSource( new PointLight(Point3D(-1.02, 0.02, 1), Colour(0.10, 0.10, 0.1)));
 
-	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &texture_moon );
-	/*
-	SceneDagNode* plane_bottom = raytracer.addObject( new UnitSquare(), &mat_green);
-	SceneDagNode* plane_left = raytracer.addObject( new UnitSquare(), &mat_red);
-	SceneDagNode* plane_top = raytracer.addObject( new UnitSquare(), &mat_gold);
-	SceneDagNode* plane_right = raytracer.addObject( new UnitSquare(), &mat_chrome);
-	
-    raytracer.translate(plane_back, Vector3D(0, 0, -7));        
+	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &texture_galaxy);
+    raytracer.translate(plane_back, Vector3D(0, 0, -18));        
     raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
 
-	raytracer.translate(plane_bottom, Vector3D(0, -4, -3));        
-    raytracer.scale(plane_bottom, Point3D(0, 0, 0), factor2);
-	raytracer.rotate(plane_bottom, 'x', -90);
+	SceneDagNode* sphere4 = raytracer.addObject( new UnitSphere(), &texture_neptune );
+	raytracer.translate(sphere4, Vector3D(2, 2.5, -5));
+	raytracer.scale(sphere4, Point3D(0,0,0), factor1);
+	raytracer.rotate(sphere4, 'y', 30);
 
-	raytracer.translate(plane_left, Vector3D(-4, 0, -3));        
-    raytracer.scale(plane_left, Point3D(0, 0, 0), factor2);
-	raytracer.rotate(plane_left, 'y', 90);
-
-	raytracer.translate(plane_top, Vector3D(0, 4, -3));        
-    raytracer.scale(plane_top, Point3D(0, 0, 0), factor2);
-	raytracer.rotate(plane_top, 'x', 90);
-
-	raytracer.translate(plane_right, Vector3D(4, 0, -3));        
-    raytracer.scale(plane_right, Point3D(0, 0, 0), factor2);
-	raytracer.rotate(plane_right, 'y', -90);
+	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &texture_jupiter );
+	raytracer.translate(sphere3, Vector3D(-2, 2.5, -6.5));
+	raytracer.scale(sphere3, Point3D(0,0,0), factor3);
 
 	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &texture_moon );
-	raytracer.translate(sphere2, Vector3D(2, -1, -5));
-	raytracer.scale(sphere2, Point3D(0,0,0), factor1);
-		
-	SceneDagNode* sphere3 = raytracer.addObject( new UnitSphere(), &mat_jade );
-	raytracer.translate(sphere3, Vector3D(1, -2, -5));
-	raytracer.scale(sphere3, Point3D(0,0,0), factor1);
+	raytracer.translate(sphere2, Vector3D(2.5, -1.5, -4.5));
+	raytracer.scale(sphere2, Point3D(0,0,0), factor0);
 
 	SceneDagNode* hyper = raytracer.addObject( new UnitSphere(), &texture_earth);
 	raytracer.translate(hyper, Vector3D(0, 0, -1));
 	raytracer.scale(hyper, Point3D(0,0,0), factor1);
-	//raytracer.rotate(hyper, 'x', 60);
-	//raytracer.rotate(hyper, 'y', 45);
-
-	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &mat_light);
-	raytracer.translate(sphere1, Vector3D(-2, 0, -4));
-	raytracer.scale(sphere1, Point3D(0,0,0), factor1);
-	*/
+	raytracer.rotate(hyper, 'z', 15);
+	raytracer.rotate(hyper, 'x', 15);
+	//raytracer.rotate(hyper, 'y', 180);
+	
 	// Camera parameters.
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
 	Vector3D up(0, 1, 0);
-	double fov = 60;
+	double fov = 55;
 
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
@@ -947,7 +936,7 @@ int main(int argc, char* argv[])
 	// Render it from a different point of view.
 	Point3D eye2(2, 2, 1);
 	Vector3D view2(-2, -2, -6);
-	raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
+	//raytracer.render(width, height, eye2, view2, up, fov, "view2.bmp");
 
 	
 

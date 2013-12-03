@@ -127,10 +127,6 @@ private:
 	// Saves the pixel buffer to a file and deletes the buffer.
 	void flushPixelBuffer(char *file_name);
 
-	// Get pixel value for texture mapped object
-	void textureMapping(Ray3D& ray, 
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel ); 
-
 	// Return the colour of the ray after intersection and shading, call 
 	// this function recursively for reflection and refraction.  
 	Colour shadeRay( Ray3D& ray, int depth, 

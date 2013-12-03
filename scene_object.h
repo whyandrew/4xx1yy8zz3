@@ -28,8 +28,10 @@ public:
 	// Store the smaller t solution to p_tValue
 	static bool solveT(double A, double B, double C, double* p_tValue);
 
-	virtual void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel) = 0;
+	// Return mapped textural pixel color.
+	// Need to be called by each light shade function
+	// Does not set ray.col
+	virtual Colour textureMapping(const Ray3D& ray) = 0;
 };
 
 // Subclass for object composing of multiple objects
@@ -68,16 +70,14 @@ class UnitSquare : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
-	void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+	Colour textureMapping(const Ray3D& ray);
 };
 
 class UnitSphere : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
-	void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+	Colour textureMapping(const Ray3D& ray);
 };
 
 // Hyperboloid (open-ended) lays flat along z-axis
@@ -90,8 +90,7 @@ public :
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 
-	void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+	Colour textureMapping(const Ray3D& ray);
 private :
 	double _zRange;
 };
@@ -108,8 +107,7 @@ public :
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 
-	void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+	Colour textureMapping(const Ray3D& ray);
 private :
 	double _radius;
 	double _zvalue;
@@ -126,8 +124,7 @@ public :
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			const Matrix4x4& modelToWorld, bool b_shadowRay );
 
-	void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+	Colour textureMapping(const Ray3D& ray);
 private :
 	double _zRange;
 	SceneObject *p_objList[3];
@@ -158,6 +155,5 @@ public:
 	// Setup a open hyperboloid and 2 circle planes
 	void construct();
 
-	void textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel);
+	Colour textureMapping(const Ray3D& ray);
 };

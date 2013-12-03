@@ -107,8 +107,11 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 					b_isHit = true;
 					ray.intersection.none = false;
 					ray.intersection.t_value = t_value;
-					ray.intersection.fp_textureMapping = &SceneObject::textureMapping;
+					//ray.intersection.fp_textureMapping = &SceneObject::textureMapping;
 					ray.intersection.p_sceneObj = this;
+					ray.intersection.M_m2w = modelToWorld;
+					ray.intersection.M_w2m = worldToModel;
+
 					if (!b_shadowRay)
 					{
 						Vector3D normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
@@ -183,8 +186,10 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			Point3D hitPt = ray_orig + (t_value * ray_dir);
 			ray.intersection.none = false;
 			ray.intersection.t_value = t_value;
-			ray.intersection.fp_textureMapping = &SceneObject::textureMapping;
+			//ray.intersection.fp_textureMapping = &SceneObject::textureMapping;
 			ray.intersection.p_sceneObj = this;
+			ray.intersection.M_m2w = modelToWorld;
+			ray.intersection.M_w2m = worldToModel;
 			if (!b_shadowRay)
 			{
 				ray.intersection.point = modelToWorld * hitPt;
@@ -376,11 +381,10 @@ void Hyperboloid2::construct()
 	p_objPList = p_List;
 }
 
-void UnitSquare::textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+Colour UnitSquare::textureMapping(const Ray3D& ray)
 {
 	// Intersection pt (x,y) should be between -0,5 to 0.5
-	Point3D pt = *worldToModel * ray.intersection.point;
+	Point3D pt = ray.intersection.M_w2m * ray.intersection.point;
 	unsigned long int picWidth = ray.intersection.mat->txt_width;
 	unsigned long int picHeight = ray.intersection.mat->txt_height;
 	// Range from 0 to 1.0
@@ -388,32 +392,33 @@ void UnitSquare::textureMapping(Ray3D& ray,
 	double y = pt[1] + 0.5;
 
 	// Range over size of texture e.g. 0 to 1024
-	x *= picWidth;
-	y *= picHeight;
+	unsigned long int xCoord;
+	unsigned long int yCoord;
+	xCoord = (unsigned long int)(x * picWidth);
+	yCoord = (unsigned long int)(y * picHeight);
 	
-	unsigned long int pixel = (unsigned long int)x * (picWidth) + (unsigned long int)y;
+	unsigned long int pixel = (xCoord + yCoord * picWidth);
 	Material *mat = ray.intersection.mat;
 	Colour pixelCol = Colour(mat->txt_rbuffer[pixel] / 255.0,
 		mat->txt_gbuffer[pixel] / 255.0,
 		mat->txt_bbuffer[pixel] / 255.0);
 
-	ray.col = ray.col + pixelCol;
-
+	//ray.col = ray.col + pixelCol;
+	return pixelCol;
 }
 
-void UnitSphere::textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
+Colour UnitSphere::textureMapping(const Ray3D& ray)
 {
 	//printf("UnitShpere Texture\n");
 
 	// Map texture to sphere as vertical and horizontal components
 	// Ray must contain intersection.point 
-	// http://www.cs.unc.edu/~rademach/xroads-RT/RTarticle.html#glas89
+
 	Vector3D vert(0.0, 1.0, 0.0);
 	Vector3D horiz(1.0, 0.0, 0.0);
-	Point3D pt = *worldToModel * ray.intersection.point;
+	Point3D pt = ray.intersection.M_w2m * ray.intersection.point;
 	Vector3D ptVect(pt[0], pt[1], pt[2]);
-	ptVect.normalize();
+	//ptVect.normalize();
 	double x, y;
 
 	//Angle between pt and vertical
@@ -434,40 +439,42 @@ void UnitSphere::textureMapping(Ray3D& ray,
 	//printf("(%f, %f)  ", x, y);
 	// Now get the corresponding pixel from texture
 	Material *p_mat = ray.intersection.mat;
-	unsigned long int pixel = 
-		((unsigned long int)(x * p_mat->txt_width)) + y;
+	unsigned long int xCoord;
+	unsigned long int yCoord;
+	xCoord = (unsigned long int)(x * p_mat->txt_width);
+	yCoord = (unsigned long int)(y * p_mat->txt_height);
 
-	if (pixel < 0 || pixel >= p_mat->txt_height * p_mat->txt_width )
-	{
-		printf("Pixel out of bound: %d\n", pixel);
-	}
-	/*
-	if (p_mat->txt_rbuffer[pixel] < 200)
-	{
-		printf("Red less than 200: %d\n", p_mat->txt_rbuffer[pixel]);
-	}
-	*/
+	unsigned long int pixel = xCoord + yCoord * p_mat->txt_width;
+
 	Colour pixelCol = Colour((double)p_mat->txt_rbuffer[pixel] / 255.0 ,
 		(double)p_mat->txt_gbuffer[pixel] / 255.0, 
 		(double)p_mat->txt_bbuffer[pixel] / 255.0);
-
-
-	ray.col = ray.col + pixelCol;
+	
+	//ray.col = ray.col + pixelCol;
 	//ray.col.clamp();
+	return pixelCol;
 }
 
-void _Hyperboloid::textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
-{}
+Colour _Hyperboloid::textureMapping(const Ray3D& ray)
+{
+	Colour pixelColor;
+	return pixelColor;
+}
 
-void _Circle::textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
-{}
+Colour _Circle::textureMapping(const Ray3D& ray)
+{
+	Colour pixelColor;
+	return pixelColor;
+}
 
-void Hyperboloid::textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
-{}
+Colour Hyperboloid::textureMapping(const Ray3D& ray)
+{
+	Colour pixelColor;
+	return pixelColor;
+}
 
-void Hyperboloid2::textureMapping(Ray3D& ray,
-		Matrix4x4* modelToWorld, Matrix4x4* worldToModel)
-{}
+Colour Hyperboloid2::textureMapping(const Ray3D& ray)
+{
+	Colour pixelColor;
+	return pixelColor;
+}

@@ -218,6 +218,9 @@ struct Intersection {
 	// Set to true when no intersection has occured.
 	bool none;
 
+	// Save the trans & inv matrix for the intersection
+	Matrix4x4 M_m2w;
+	Matrix4x4 M_w2m;
 	// Function pointer for texture mapping
 	void (SceneObject::*fp_textureMapping)(Ray3D&, Matrix4x4*, Matrix4x4*);
 	SceneObject* p_sceneObj;

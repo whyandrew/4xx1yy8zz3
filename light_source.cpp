@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include "light_source.h"
+#include "scene_object.h"
 
 void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 	// TODO: implement this function to fill in values for ray.col 
@@ -19,17 +20,27 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 	// It is assumed at this point that the intersection information in ray 
 	// is available.  So be sure that traverseScene() is called on the ray 
 	// before this function.  
+	bool b_texture = ray.intersection.mat->b_isTexture;
+
+	Colour textureColor(0.0, 0.0, 0.0);
+	if (b_texture)
+	{
+		//(ray.intersection.fp_textureMapping)(ray);
+		textureColor = ray.intersection.p_sceneObj->textureMapping(ray);
+	}
 
 	// Scene Signature only
 	if (_render_mode & MODE_SIGNATURE)
 	{
-		// Just use plain diffuse color, disregard lights
-		ray.col = ray.col + ray.intersection.mat->diffuse;
+		// Just use plain diffuse or texture color, disregard lights
+		ray.col = ray.col + 
+			(b_texture? textureColor: ray.intersection.mat->diffuse);
 		//ray.col.clamp();
 		//ray.col = ray.intersection.mat->specular;
 		return;
 	}
 
+	Colour fullColor( 1.0, 1.0, 1.0);
 	Colour newColor = Colour(0.0, 0.0, 0.0);
 	Material* objMat = ray.intersection.mat;
 	Vector3D objNormal = ray.intersection.normal;
@@ -39,7 +50,8 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 	if (_render_mode & MODE_AMBIENT)
 	{
 		// Add ambient, uniform non-directional
-		newColor = newColor + (_col_ambient * objMat->ambient);
+		newColor = newColor + (_col_ambient * objMat->ambient *
+			(b_texture? textureColor: fullColor) );
 	}
 
 	Vector3D vec_light = _pos - objPoint;
@@ -51,7 +63,8 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 		// Add diffuse, mat*light*max(0,factor), factor = normal(dot)light
 		double factor = objNormal.dot( vec_light );
 		factor = factor>0.0? factor: 0.0;
-		newColor = newColor + ( factor * (_col_diffuse * objMat->diffuse));
+		newColor = newColor + ( factor * (_col_diffuse * objMat->diffuse *
+			(b_texture? textureColor: fullColor) ));
 	}
 
 	// Specular
@@ -65,8 +78,9 @@ void PointLight::shade( Ray3D& ray, bool b_inShadow ) {
 		vect_backRay.normalize();
 		double factor = vect_backRay.dot(vec_reflect);
 		factor = factor>0.0? factor: 0.0;
-		newColor = newColor + ( pow(factor, objMat->specular_exp) * _col_specular * objMat->specular);
-		//newColor = newColor + ( factor * _col_specular * objMat->specular);
+		newColor = newColor + ( pow(factor, objMat->specular_exp) * 
+			_col_specular * objMat->specular *
+			(b_texture? textureColor: fullColor));
 	}
 
 	//newColor.clamp();
