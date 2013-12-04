@@ -1,0 +1,35 @@
+Andrew Wong, 999369507
+(Working solo)
+
+--------------------
+CSC418 A4 PartA Only
+--------------------
+
+Implemented "intersect" for UnitSquare and UnitSphere
+
+- based on formulas from notes & textbook
+- basically, solving equations for t_value
+- if at t_value, ray is within the primitive, it's an intersection
+- store intersection info into ray.intersection
+
+
+Implemented PointLight::Shade
+
+- All 3 component of Phong model are calculated separately
+- Lighting mode set by bitwise-OR to global variable "_render_mode"
+- Modes definitions in light_source.h
+- "Signature" mode simply display scene object diffuse color without lighting adjustment
+- Individual component of Phong follows calculations from notes & textbook
+
+
+Finished implementationof Raytracer::render
+
+- Added codes to generate ray and convert to world coordinate.
+
+
+Images
+- "sig1" & "sig2" generated with "_render_mode = MODE_SIGNATURE"
+- "diffuse1" & "diffuse2" generated with "_render_mode = (mode)(MODE_DIFFUSE | MODE_AMBIENT)"
+- "phong1" & "phong2" generated with "_render_mode = MODE_FULLPHONG"
+
+---------------------
