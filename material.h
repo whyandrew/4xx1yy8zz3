@@ -141,3 +141,9 @@ Material texture_neptune( "Texture neptune", "neptune.bmp",
 					   Colour(0.8, 0.8 , 0.8),
 					   Colour(0.0, 0.0 , 0.0),
 					   128*0.2, 0.0);
+
+Material texture_hardwood( "Texture Hardwood", "hardwood.bmp",
+						Colour(0.1,0.1,0.1),
+						Colour(1.0, 1.0, 1.0),
+						Colour(1.0, 1.0, 1.0),
+						128*0.4, 0.7);

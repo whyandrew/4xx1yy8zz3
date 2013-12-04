@@ -29,7 +29,7 @@ Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 	if (_render_mode & (mode)(MODE_REFLECT | MODE_REFRACT))
 	{
-		_reflect_depth = 6;
+		_reflect_depth = 3;
 		_reflect_fudge_factor = 6;
 		_refract_global_factor = 2;
 	}
@@ -977,14 +977,14 @@ int main(int argc, char* argv[])
 	
 	double factor0[3] = {0.3, 0.3, 0.3};
 	double factor1[3] = {0.5, 0.5, 0.5};
-	double factor2[3] = {8.0, 8.0, 8.0 };
+	double factor2[3] = {10.0, 6.0, 8.0 };
 	double factor3[3] = {1.5, 1.5, 1.5};
 
-	raytracer.addLightSource( new PointLight(Point3D(-3, 5, -1), Colour(0.5, 0.5, 0.5)));
-	raytracer.addLightSource( new PointLight(Point3D(-3, 2.5, 0.9), Colour(0.5, 0.5, 0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(-3, 6, -0.9), Colour(0.5, 0.5, 0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(-3, 2.1, 0.9), Colour(0.5, 0.5, 0.5)));
 
-	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_yellow);
-	raytracer.translate(plane_back, Vector3D(0, -0.5, -3));        
+	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &texture_hardwood);
+	raytracer.translate(plane_back, Vector3D(0, -0.5, -4));        
     raytracer.scale(plane_back, Point3D(0, 0, 0), factor2);
 	raytracer.rotate(plane_back, 'x', -90);
 
@@ -1010,8 +1010,8 @@ int main(int argc, char* argv[])
 	//raytracer.rotate(hyper, 'y', 180);
 	
 	// Camera parameters.
-	Point3D eye(0, 0, 1);
-	Vector3D view(0, 0, -1);
+	Point3D eye(0, 0.5, 1);
+	Vector3D view(0, -0.27, -1);
 	Vector3D up(0, 1, 0);
 	double fov = 41;
 
