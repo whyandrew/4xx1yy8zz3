@@ -229,14 +229,10 @@ Point3D getRandomPt(Vector3D inDir, Point3D center, double radius)
 	ranRadius = ranRadius * radius;
 	ranAngle = (double)rand() / RAND_MAX;
 	ranAngle = ranAngle * 2.0 * M_PI;
-	printf("cos-ranAngle = %f\n", ranRadius * sin(ranAngle));
-	double u_coor = ( ranRadius * cos(ranAngle) );// - ( radius / 2.0 );
-	double v_coor = ( ranRadius * sin(ranAngle) );// - ( radius / 2.0 );
-	/*
-	if (u_coor < (-radius/2.0) || u_coor > (radius/2.0))
-		printf("U_coor = %f \n", u_coor);
-	if (v_coor < (-radius/2.0) || v_coor > (radius/2.0))
-		printf("V_coor = %f \n", v_coor); */
+
+	double u_coor = ( ranRadius * cos(ranAngle) );
+	double v_coor = ( ranRadius * sin(ranAngle) );
+
 	// Get orthogonal vectors pair to incident vector
 	Vector3D vect01;
 	if (inDir[1] != 0 || inDir[2] != 0)
@@ -276,11 +272,6 @@ void Raytracer::computeShading( Ray3D& ray,
 			// Advance the intersection point by a small delta
 			Point3D deltaPt = ray.intersection.point + (0.001 * vec_toLight);
 			double percentLight = 0;
-			
-			// If the FIRST 10 consecutive shadowRays not in shadow
-			// assume the point is not in shadow to save computation time
-			int countNotShadow = 0;
-			const int maxNotShadow = 15;
 
 			if (_render_mode & 
 				(MODE_SOFTSHADOW_HIGH | MODE_SOFTSHADOW_LOW | MODE_SOFTSHADOW_EXTREME) )
@@ -296,7 +287,12 @@ void Raytracer::computeShading( Ray3D& ray,
 				else 
 					numRays = 10;
 
-				double radius = 0.5;
+				double radius = 0.3;
+
+				// If the FIRST consecutive shadowRays not in shadow
+				// assume the point is not in shadow to save computation time
+				int countNotShadow = 0;
+				const int maxNotShadow = 15;
 
 				for (int i = 0; i < numRays; i++, countNotShadow < maxNotShadow)
 				{
@@ -845,14 +841,14 @@ int main(int argc, char* argv[])
 	//_render_mode = (mode)(MODE_SIGNATURE);
 	//_render_mode = (mode)(MODE_FULL_PHONG | MODE_MULTITHREAD);// | MODE_SSAA4);
 	//_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SHADOW | MODE_REFRACT );
-	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SOFTSHADOW_EXTREME | MODE_SSAA4);
+	_render_mode = (mode)(MODE_FULL_PHONG  | MODE_MULTITHREAD | MODE_SOFTSHADOW_EXTREME | MODE_SSAA16 );
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_DIFFUSE);
 	//_render_mode = (mode) (MODE_MULTITHREAD | MODE_SPECULAR);
 	
 	Raytracer raytracer;
 
-	int width = 600; 
-	int height = 400; 
+	int width = 900; 
+	int height = 600; 
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
@@ -984,8 +980,8 @@ int main(int argc, char* argv[])
 	double factor2[3] = {8.0, 8.0, 8.0 };
 	double factor3[3] = {1.5, 1.5, 1.5};
 
-	raytracer.addLightSource( new PointLight(Point3D(-3, 5, -1), Colour(1,1,1)));
-
+	raytracer.addLightSource( new PointLight(Point3D(-3, 5, -1), Colour(0.5, 0.5, 0.5)));
+	raytracer.addLightSource( new PointLight(Point3D(-3, 2.5, 0.9), Colour(0.5, 0.5, 0.5)));
 
 	SceneDagNode* plane_back = raytracer.addObject( new UnitSquare(), &mat_yellow);
 	raytracer.translate(plane_back, Vector3D(0, -0.5, -3));        
