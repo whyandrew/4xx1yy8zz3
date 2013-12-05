@@ -1,0 +1,91 @@
+/***********************************************************
+     Starter code for Assignment 3
+
+     This code was originally written by Jack Wang for
+		    CSC418, SPRING 2005
+
+		implements light_source.h
+
+***********************************************************/
+
+#include <cmath>
+#include "light_source.h"
+#include "scene_object.h"
+
+void PointLight::shade( Ray3D& ray, double percentLight ) {
+	// TODO: implement this function to fill in values for ray.col 
+	// using phong shading.  Make sure your vectors are normalized, and
+	// clamp colour values to 1.0.
+	//
+	// It is assumed at this point that the intersection information in ray 
+	// is available.  So be sure that traverseScene() is called on the ray 
+	// before this function.  
+	bool b_texture = ray.intersection.mat->b_isTexture;
+
+	Colour textureColor(0.0, 0.0, 0.0);
+	if (b_texture)
+	{
+		//(ray.intersection.fp_textureMapping)(ray);
+		textureColor = ray.intersection.p_sceneObj->textureMapping(ray);
+	}
+
+	// Scene Signature only
+	if (_render_mode & MODE_SIGNATURE)
+	{
+		// Just use plain diffuse or texture color, disregard lights
+		ray.col = ray.col + 
+			(b_texture? textureColor: ray.intersection.mat->diffuse);
+		//ray.col.clamp();
+		//ray.col = ray.intersection.mat->specular;
+		return;
+	}
+
+	Colour fullColor( 1.0, 1.0, 1.0);
+	Colour newColor = Colour(0.0, 0.0, 0.0);
+	Material* objMat = ray.intersection.mat;
+	Vector3D objNormal = ray.intersection.normal;
+	Point3D objPoint = ray.intersection.point;
+
+	// Ambient
+	if (_render_mode & MODE_AMBIENT)
+	{
+		// Add ambient, uniform non-directional
+		newColor = newColor + (_col_ambient * objMat->ambient *
+			(b_texture? textureColor: fullColor) );
+	}
+
+	Vector3D vec_light = _pos - objPoint;
+	vec_light.normalize();
+
+	// Diffuse
+	if (_render_mode & MODE_DIFFUSE && percentLight > 0.0)
+	{
+		// Add diffuse, mat*light*max(0,factor), factor = normal(dot)light
+		double factor = objNormal.dot( vec_light ) * percentLight;
+		factor = factor>0.0? factor: 0.0;
+		newColor = newColor + ( factor * (_col_diffuse * objMat->diffuse *
+			(b_texture? textureColor: fullColor) ));
+	}
+
+	// Specular
+	if (_render_mode & MODE_SPECULAR && percentLight > 0.0)
+	{
+		// Add specular, mat*light*max(0,factor), factor = -ray(dot)reflect
+		// reflect = 2(light(dot)normal)*normal - light
+		Vector3D vec_reflect = (2 * objNormal.dot( vec_light ) * objNormal) - vec_light;
+		vec_reflect.normalize();
+		Vector3D vect_backRay = -ray.dir;
+		vect_backRay.normalize();
+		double factor = vect_backRay.dot(vec_reflect) * percentLight;
+		factor = factor>0.0? factor: 0.0;
+		newColor = newColor + ( pow(factor, objMat->specular_exp) * 
+			_col_specular * objMat->specular *
+			(b_texture? textureColor: fullColor));
+	}
+
+	//newColor.clamp();
+
+	ray.col = ray.col + newColor;
+	//ray.col =  newColor;
+}
+
